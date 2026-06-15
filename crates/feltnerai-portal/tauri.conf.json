@@ -1,0 +1,40 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "FeltnerAI Portal",
+  "version": "1.0.0",
+  "identifier": "ai.feltner.portal",
+  "build": {
+    "beforeDevCommand": "bun run --cwd ../frontend dev",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "bun run --cwd ../frontend build",
+    "frontendDist": "../../frontend/dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "FeltnerAI Portal",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 760,
+        "minHeight": 560,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; connect-src 'self' http: https:; img-src 'self' data: http: https:; style-src 'self' 'unsafe-inline' http: https:; script-src 'self'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": ["icons/icon.png", "icons/icon.ico"],
+    "createUpdaterArtifacts": false,
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons/icon.ico"
+      }
+    },
+    "shortDescription": "Connect to self-hosted FeltnerAI servers",
+    "longDescription": "A cross-platform desktop portal for one or more self-hosted FeltnerAI servers."
+  }
+}

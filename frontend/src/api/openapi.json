@@ -1,0 +1,746 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "feltnerai-api-types",
+    "description": "",
+    "license": {
+      "name": "AGPL-3.0-only",
+      "identifier": "AGPL-3.0-only"
+    },
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "ApiError": {
+        "type": "object",
+        "required": ["code", "message"],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "Branding": {
+        "type": "object",
+        "required": ["server_name", "accent_color"],
+        "properties": {
+          "accent_color": {
+            "type": "string"
+          },
+          "custom_css_url": {
+            "type": ["string", "null"]
+          },
+          "favicon_url": {
+            "type": ["string", "null"]
+          },
+          "logo_url": {
+            "type": ["string", "null"]
+          },
+          "server_name": {
+            "type": "string"
+          }
+        }
+      },
+      "Capabilities": {
+        "type": "object",
+        "required": ["chat_streaming", "portal_sessions", "custom_branding"],
+        "properties": {
+          "chat_streaming": {
+            "type": "boolean"
+          },
+          "custom_branding": {
+            "type": "boolean"
+          },
+          "portal_sessions": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ChangePasswordRequest": {
+        "type": "object",
+        "required": ["current_password", "new_password"],
+        "properties": {
+          "current_password": {
+            "type": "string"
+          },
+          "new_password": {
+            "type": "string"
+          }
+        }
+      },
+      "Chat": {
+        "type": "object",
+        "required": ["id", "title", "created_at", "updated_at"],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "model_id": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ConfigureModelRequest": {
+        "type": "object",
+        "required": ["upstream_id", "display_name"],
+        "properties": {
+          "display_name": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "is_default": {
+            "type": "boolean"
+          },
+          "upstream_id": {
+            "type": "string"
+          }
+        }
+      },
+      "ConnectionTestResponse": {
+        "type": "object",
+        "required": ["ok", "message", "models"],
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CreateChatRequest": {
+        "type": "object",
+        "properties": {
+          "model_id": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "title": {
+            "type": ["string", "null"]
+          }
+        }
+      },
+      "CreateProviderRequest": {
+        "type": "object",
+        "required": ["name", "base_url"],
+        "properties": {
+          "additional_headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "api_key": {
+            "type": ["string", "null"]
+          },
+          "base_url": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateUserRequest": {
+        "type": "object",
+        "required": ["username", "password", "role"],
+        "properties": {
+          "email": {
+            "type": ["string", "null"]
+          },
+          "password": {
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "GenerateRequest": {
+        "type": "object",
+        "required": ["request_id", "content"],
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "model_id": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "HealthResponse": {
+        "type": "object",
+        "required": ["status", "version"],
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      },
+      "ImportDataResponse": {
+        "type": "object",
+        "required": ["restart_required", "message"],
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "restart_required": {
+            "type": "boolean"
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["login", "password"],
+        "properties": {
+          "login": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "portal": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Message": {
+        "type": "object",
+        "required": [
+          "id",
+          "chat_id",
+          "role",
+          "content",
+          "status",
+          "created_at"
+        ],
+        "properties": {
+          "chat_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "content": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "model_id": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "model_name": {
+            "type": ["string", "null"]
+          },
+          "provider_name": {
+            "type": ["string", "null"]
+          },
+          "role": {
+            "$ref": "#/components/schemas/MessageRole"
+          },
+          "status": {
+            "$ref": "#/components/schemas/MessageStatus"
+          }
+        }
+      },
+      "MessageRole": {
+        "type": "string",
+        "enum": ["user", "assistant"]
+      },
+      "MessageStatus": {
+        "type": "string",
+        "enum": ["complete", "streaming", "canceled", "error"]
+      },
+      "Model": {
+        "type": "object",
+        "required": [
+          "id",
+          "provider_id",
+          "provider_name",
+          "upstream_id",
+          "display_name",
+          "enabled",
+          "is_default"
+        ],
+        "properties": {
+          "display_name": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "is_default": {
+            "type": "boolean"
+          },
+          "provider_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "provider_name": {
+            "type": "string"
+          },
+          "upstream_id": {
+            "type": "string"
+          }
+        }
+      },
+      "Provider": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "base_url",
+          "has_api_key",
+          "additional_header_names",
+          "enabled",
+          "created_at"
+        ],
+        "properties": {
+          "additional_header_names": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "base_url": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "has_api_key": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "ProviderDraft": {
+        "type": "object",
+        "required": ["name", "base_url"],
+        "properties": {
+          "additional_headers": {
+            "type": ["object", "null"],
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "api_key": {
+            "type": ["string", "null"]
+          },
+          "base_url": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "Role": {
+        "type": "string",
+        "enum": ["admin", "user"]
+      },
+      "ServerHandshake": {
+        "type": "object",
+        "required": [
+          "server_uuid",
+          "api_major",
+          "version",
+          "setup_complete",
+          "capabilities",
+          "branding"
+        ],
+        "properties": {
+          "api_major": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "branding": {
+            "$ref": "#/components/schemas/Branding"
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/Capabilities"
+          },
+          "public_url": {
+            "type": ["string", "null"]
+          },
+          "server_uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "setup_complete": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      },
+      "ServerSettings": {
+        "type": "object",
+        "required": [
+          "trusted_proxies",
+          "data_dir",
+          "startup_supported",
+          "start_at_login"
+        ],
+        "properties": {
+          "data_dir": {
+            "type": "string"
+          },
+          "public_url": {
+            "type": ["string", "null"]
+          },
+          "start_at_login": {
+            "type": "boolean"
+          },
+          "startup_supported": {
+            "type": "boolean"
+          },
+          "trusted_proxies": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "SessionResponse": {
+        "type": "object",
+        "required": ["user", "expires_at"],
+        "properties": {
+          "bearer_token": {
+            "type": ["string", "null"]
+          },
+          "csrf_token": {
+            "type": ["string", "null"]
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          }
+        }
+      },
+      "SetupRequest": {
+        "type": "object",
+        "required": ["server_name", "username", "password"],
+        "properties": {
+          "accent_color": {
+            "type": ["string", "null"]
+          },
+          "email": {
+            "type": ["string", "null"]
+          },
+          "password": {
+            "type": "string"
+          },
+          "provider": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ProviderDraft"
+              }
+            ]
+          },
+          "public_url": {
+            "type": ["string", "null"]
+          },
+          "server_name": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "SetupStatus": {
+        "type": "object",
+        "required": ["complete"],
+        "properties": {
+          "complete": {
+            "type": "boolean"
+          }
+        }
+      },
+      "StreamEvent": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": ["message_id", "event"],
+            "properties": {
+              "event": {
+                "type": "string",
+                "enum": ["started"]
+              },
+              "message_id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["content", "event"],
+            "properties": {
+              "content": {
+                "type": "string"
+              },
+              "event": {
+                "type": "string",
+                "enum": ["delta"]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["message_id", "event"],
+            "properties": {
+              "event": {
+                "type": "string",
+                "enum": ["completed"]
+              },
+              "message_id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["message", "event"],
+            "properties": {
+              "event": {
+                "type": "string",
+                "enum": ["error"]
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "Theme": {
+        "type": "string",
+        "enum": ["light", "dark", "system"]
+      },
+      "UpdateBrandingRequest": {
+        "type": "object",
+        "properties": {
+          "accent_color": {
+            "type": ["string", "null"]
+          },
+          "custom_css": {
+            "type": ["string", "null"]
+          },
+          "server_name": {
+            "type": ["string", "null"]
+          }
+        }
+      },
+      "UpdateChatRequest": {
+        "type": "object",
+        "properties": {
+          "model_id": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "title": {
+            "type": ["string", "null"]
+          }
+        }
+      },
+      "UpdatePreferencesRequest": {
+        "type": "object",
+        "required": ["theme"],
+        "properties": {
+          "theme": {
+            "$ref": "#/components/schemas/Theme"
+          }
+        }
+      },
+      "UpdateProviderRequest": {
+        "type": "object",
+        "properties": {
+          "additional_headers": {
+            "type": ["object", "null"],
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "api_key": {
+            "type": ["string", "null"]
+          },
+          "base_url": {
+            "type": ["string", "null"]
+          },
+          "clear_api_key": {
+            "type": ["boolean", "null"]
+          },
+          "enabled": {
+            "type": ["boolean", "null"]
+          },
+          "name": {
+            "type": ["string", "null"]
+          }
+        }
+      },
+      "UpdateServerSettingsRequest": {
+        "type": "object",
+        "properties": {
+          "public_url": {
+            "type": ["string", "null"]
+          },
+          "start_at_login": {
+            "type": ["boolean", "null"]
+          },
+          "trusted_proxies": {
+            "type": ["array", "null"],
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "UpdateUserRequest": {
+        "type": "object",
+        "properties": {
+          "disabled": {
+            "type": ["boolean", "null"]
+          },
+          "email": {
+            "type": ["string", "null"]
+          },
+          "replacement_password": {
+            "type": ["string", "null"]
+          },
+          "role": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Role"
+              }
+            ]
+          },
+          "username": {
+            "type": ["string", "null"]
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "required": [
+          "id",
+          "username",
+          "role",
+          "disabled",
+          "must_change_password",
+          "theme",
+          "created_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "disabled": {
+            "type": "boolean"
+          },
+          "email": {
+            "type": ["string", "null"]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "must_change_password": {
+            "type": "boolean"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          },
+          "theme": {
+            "$ref": "#/components/schemas/Theme"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

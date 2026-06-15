@@ -1,0 +1,52 @@
+[package]
+name = "feltnerai-server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+build = "build.rs"
+
+[dependencies]
+anyhow.workspace = true
+async-stream.workspace = true
+axum.workspace = true
+base64.workspace = true
+bytes.workspace = true
+chrono.workspace = true
+dashmap.workspace = true
+feltnerai-api-types = { path = "../feltnerai-api-types" }
+feltnerai-core = { path = "../feltnerai-core" }
+feltnerai-provider-openai = { path = "../feltnerai-provider-openai" }
+futures.workspace = true
+http.workspace = true
+http-body-util.workspace = true
+mime_guess.workspace = true
+rand.workspace = true
+rust-embed.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+sqlx.workspace = true
+subtle.workspace = true
+tokio.workspace = true
+tokio-stream.workspace = true
+tokio-util.workspace = true
+tower.workspace = true
+tower-http.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+url.workspace = true
+uuid.workspace = true
+zip.workspace = true
+
+[dev-dependencies]
+tempfile = "3"
+
+[target.'cfg(windows)'.dependencies]
+image = { version = "0.25", default-features = false, features = ["png"] }
+tray-icon = "0.24"
+webbrowser = "1.2"
+winreg = "0.56"
+winit = "0.30"
+
+[target.'cfg(windows)'.build-dependencies]
+winresource = "0.1"
