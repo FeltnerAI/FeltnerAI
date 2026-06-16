@@ -99,6 +99,28 @@ impl OpenAiProvider {
         Ok(models)
     }
 
+    /// Forward a prebuilt chat-completion request body to the upstream provider
+    /// and return the raw streaming response. Used by agent clients that need
+    /// full control of the message array and tool definitions.
+    pub async fn open_completions(
+        &self,
+        config: &ProviderConfig,
+        body: serde_json::Value,
+    ) -> Result<reqwest::Response, ProviderError> {
+        let response = self
+            .client
+            .post(format!("{}/chat/completions", config.base_url))
+            .headers(Self::headers(config)?)
+            .json(&body)
+            .send()
+            .await
+            .map_err(|_| ProviderError::Connection)?;
+        if !response.status().is_success() {
+            return Err(ProviderError::Http(response.status()));
+        }
+        Ok(response)
+    }
+
     pub async fn stream_chat(
         &self,
         config: ProviderConfig,

@@ -1276,7 +1276,7 @@ dependencies = [
 
 [[package]]
 name = "feltnerai-api-types"
-version = "1.0.0"
+version = "0.1.0"
 dependencies = [
  "chrono",
  "serde",
@@ -1288,7 +1288,7 @@ dependencies = [
 
 [[package]]
 name = "feltnerai-core"
-version = "1.0.0"
+version = "0.1.0"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -1312,7 +1312,7 @@ dependencies = [
 
 [[package]]
 name = "feltnerai-portal"
-version = "1.0.0"
+version = "0.1.0"
 dependencies = [
  "keyring",
  "serde",
@@ -1324,7 +1324,7 @@ dependencies = [
 
 [[package]]
 name = "feltnerai-provider-openai"
-version = "1.0.0"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -1341,7 +1341,7 @@ dependencies = [
 
 [[package]]
 name = "feltnerai-server"
-version = "1.0.0"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -1381,7 +1381,7 @@ dependencies = [
 
 [[package]]
 name = "feltnerai-tray"
-version = "1.0.0"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "image",

@@ -14,7 +14,7 @@ async function handshake(page: Page, setupComplete = true) {
       json: {
         server_uuid: "018f0000-0000-7000-8000-000000000001",
         api_major: 1,
-        version: "1.0.0",
+        version: "0.1.0",
         setup_complete: setupComplete,
         public_url: null,
         capabilities: {

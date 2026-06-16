@@ -39,6 +39,70 @@ pub async fn available_models(
     Ok(Json(fetch_models(&state, true).await?))
 }
 
+#[derive(serde::Deserialize)]
+pub struct AgentCompletionRequest {
+    pub model_id: Uuid,
+    /// OpenAI-style message array (system/user/assistant/tool), passed through.
+    pub messages: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub tools: Option<serde_json::Value>,
+    #[serde(default)]
+    pub temperature: Option<f32>,
+}
+
+/// Stateless, tool-capable chat completions for agent clients (FelterAI Code).
+/// Resolves an enabled model to its provider and streams the upstream
+/// OpenAI-compatible response (including tool calls) straight back to the caller.
+pub async fn agent_completions(
+    State(state): State<AppState>,
+    Extension(session): Extension<AuthSession>,
+    Json(request): Json<AgentCompletionRequest>,
+) -> AppResult<Response> {
+    require_password_changed(&session)?;
+    let model = sqlx::query(
+        "SELECT m.provider_id, m.upstream_id
+         FROM models m JOIN providers p ON p.id = m.provider_id
+         WHERE m.id = ? AND m.enabled = 1 AND p.enabled = 1",
+    )
+    .bind(request.model_id.to_string())
+    .fetch_optional(&state.pool)
+    .await?
+    .ok_or_else(|| AppError::conflict("The selected model is unavailable."))?;
+    let provider_id = parse_uuid(model.try_get("provider_id")?)?;
+    let upstream_model: String = model.try_get("upstream_id")?;
+    let config = load_provider_config(&state, provider_id).await?;
+
+    let mut body = serde_json::json!({
+        "model": upstream_model,
+        "messages": request.messages,
+        "stream": true,
+    });
+    if let Some(temperature) = request.temperature {
+        body["temperature"] = serde_json::json!(temperature);
+    }
+    if let Some(tools) = request.tools {
+        body["tools"] = tools;
+        body["tool_choice"] = serde_json::json!("auto");
+    }
+
+    let response = state
+        .provider
+        .open_completions(&config, body)
+        .await
+        .map_err(|error| {
+            AppError::new(StatusCode::BAD_GATEWAY, "provider_error", error.to_string())
+        })?;
+
+    Ok((
+        [
+            (axum::http::header::CONTENT_TYPE, "text/event-stream"),
+            (axum::http::header::CACHE_CONTROL, "no-cache"),
+        ],
+        axum::body::Body::from_stream(response.bytes_stream()),
+    )
+        .into_response())
+}
+
 pub async fn list_chats(
     State(state): State<AppState>,
     Extension(session): Extension<AuthSession>,

@@ -281,11 +281,19 @@ export function ChatPage() {
                 {renderedMessages.map((message) => (
                   <article
                     key={message.id}
-                    className={`rounded-2xl p-4 ${message.role === "user" ? "ml-auto max-w-[85%] bg-[var(--accent)] text-white" : "panel mr-auto w-full"}`}
+                    className={`message-in rounded-2xl px-4 py-3.5 shadow-sm ${message.role === "user" ? "ml-auto max-w-[85%] bg-[var(--accent)] text-[var(--accent-contrast)]" : "panel mr-auto w-full"}`}
                   >
                     <div className="prose-message">
                       {message.content.replace(/^\s+/, "") ||
-                        (message.status === "streaming" ? "…" : "")}
+                        (message.status === "streaming" ? (
+                          <span className="inline-flex gap-1 align-middle">
+                            <span className="size-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.3s]" />
+                            <span className="size-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.15s]" />
+                            <span className="size-1.5 animate-bounce rounded-full bg-current" />
+                          </span>
+                        ) : (
+                          ""
+                        ))}
                     </div>
                     {message.role === "assistant" && message.model_name && (
                       <div className="mt-3 text-xs text-[var(--muted)]">

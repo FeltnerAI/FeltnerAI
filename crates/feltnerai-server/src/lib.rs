@@ -85,6 +85,7 @@ pub fn router(state: AppState) -> Router {
         .route("/auth/password", put(public_auth::change_password))
         .route("/auth/preferences", put(public_auth::update_preferences))
         .route("/models", get(chats::available_models))
+        .route("/agent/completions", post(chats::agent_completions))
         .route("/chats", get(chats::list_chats).post(chats::create_chat))
         .route(
             "/chats/{chat_id}",
