@@ -1,10 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { api, apiBlob } from "../../api/client";
-import type {
-  ImportDataResponse,
-  ServerSettings,
-} from "../../api/generated";
+import type { ImportDataResponse, ServerSettings } from "../../api/generated";
 import { Button, ErrorNotice, Input } from "../../components/ui";
 import { AdminPage } from "./Users";
 

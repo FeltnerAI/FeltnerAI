@@ -44,7 +44,11 @@ export class ApiRequestError extends Error {
 
 async function request(path: string, init: RequestInit = {}) {
   const headers = new Headers(init.headers);
-  if (init.body && !(init.body instanceof FormData) && !headers.has("content-type"))
+  if (
+    init.body &&
+    !(init.body instanceof FormData) &&
+    !headers.has("content-type")
+  )
     headers.set("content-type", "application/json");
   if (runtime.bearerToken)
     headers.set("authorization", `Bearer ${runtime.bearerToken}`);

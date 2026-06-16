@@ -56,7 +56,10 @@ pub fn run() -> Result<()> {
             loop {
                 thread::sleep(Duration::from_millis(750));
                 let exited = match server.lock() {
-                    Ok(mut child) => child.try_wait().map(|status| status.is_some()).unwrap_or(true),
+                    Ok(mut child) => child
+                        .try_wait()
+                        .map(|status| status.is_some())
+                        .unwrap_or(true),
                     Err(_) => true,
                 };
                 if exited {
@@ -135,9 +138,10 @@ struct TrayApplication {
 
 impl TrayApplication {
     fn create_tray(&mut self) -> Result<()> {
-        let image = image::load_from_memory(include_bytes!("../../feltnerai-server/icons/icon.png"))
-            .context("failed to decode the server tray icon")?
-            .into_rgba8();
+        let image =
+            image::load_from_memory(include_bytes!("../../feltnerai-server/icons/icon.png"))
+                .context("failed to decode the server tray icon")?
+                .into_rgba8();
         let (width, height) = image.dimensions();
         let icon = Icon::from_rgba(image.into_raw(), width, height)
             .context("failed to create the server tray icon")?;
