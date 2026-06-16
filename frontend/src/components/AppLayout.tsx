@@ -3,7 +3,6 @@ import {
   Building2,
   LogOut,
   Menu,
-  Moon,
   Server,
   Settings,
   Sun,
@@ -17,10 +16,9 @@ import { isPortal } from "../portal";
 import { Button } from "./ui";
 
 export function AppLayout({ changeServer }: { changeServer: () => void }) {
-  const { user, logout, updateTheme } = useAuth();
+  const { user, logout } = useAuth();
   const { handshake } = useRuntime();
   const [open, setOpen] = useState(false);
-  const dark = document.documentElement.classList.contains("dark");
   const nav = [
     { to: "/", label: "Chats", icon: Bot },
     { to: "/settings", label: "Settings", icon: Settings },
@@ -91,17 +89,6 @@ export function AppLayout({ changeServer }: { changeServer: () => void }) {
               {user?.role}
             </span>
           </div>
-          <Button
-            variant="ghost"
-            className="justify-start"
-            onClick={() => {
-              const next = !dark;
-              void updateTheme(next ? "dark" : "light");
-            }}
-          >
-            {dark ? <Sun size={17} /> : <Moon size={17} />}{" "}
-            {dark ? "Light theme" : "Dark theme"}
-          </Button>
           {isPortal && (
             <Button
               variant="ghost"

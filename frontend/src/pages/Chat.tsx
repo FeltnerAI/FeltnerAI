@@ -284,7 +284,7 @@ export function ChatPage() {
                     className={`rounded-2xl p-4 ${message.role === "user" ? "ml-auto max-w-[85%] bg-[var(--accent)] text-white" : "panel mr-auto w-full"}`}
                   >
                     <div className="prose-message">
-                      {message.content ||
+                      {message.content.replace(/^\s+/, "") ||
                         (message.status === "streaming" ? "…" : "")}
                     </div>
                     {message.role === "assistant" && message.model_name && (

@@ -10,7 +10,13 @@ import {
   type ReactNode,
 } from "react";
 import { api, configureApi, login as apiLogin } from "./api/client";
-import type { Branding, ServerHandshake, Theme, User } from "./api/generated";
+import type {
+  Branding,
+  ServerHandshake,
+  SessionResponse,
+  Theme,
+  User,
+} from "./api/generated";
 import { isPortal, portal, type ServerProfile } from "./portal";
 
 interface RuntimeContextValue {
@@ -80,8 +86,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
   const session = useQuery({
     queryKey: sessionKey,
-    queryFn: () => api<User>("/auth/session"),
+    queryFn: async () => {
+      const response = await api<SessionResponse>("/auth/session");
+      configureApi({ csrfToken: response.csrf_token });
+      return response.user;
+    },
     retry: false,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
   });
 
   const login = useCallback(

@@ -27,6 +27,7 @@ pub struct AuthSession {
     pub user: User,
     pub session_id: Uuid,
     pub kind: AuthKind,
+    pub expires_at: DateTime<Utc>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -203,10 +204,25 @@ async fn authenticate(
         AuthSession {
             session_id,
             kind,
+            expires_at: new_expiry,
             user: user_from_row(&row)?,
         },
         token,
     ))
+}
+
+/// Issue a fresh CSRF token for an existing cookie session, replacing the
+/// stored hash. This lets a browser that kept its session cookie but lost the
+/// in-page CSRF token (for example after being closed and reopened) recover a
+/// valid token when it restores the session.
+pub async fn rotate_csrf(state: &AppState, session_id: Uuid) -> AppResult<String> {
+    let token = random_token();
+    sqlx::query("UPDATE sessions SET csrf_hash = ? WHERE id = ?")
+        .bind(token_hash(&token))
+        .bind(session_id.to_string())
+        .execute(&state.pool)
+        .await?;
+    Ok(token)
 }
 
 pub fn user_from_row(row: &sqlx::sqlite::SqliteRow) -> AppResult<User> {

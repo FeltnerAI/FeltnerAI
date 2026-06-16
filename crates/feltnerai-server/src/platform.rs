@@ -34,8 +34,7 @@ pub fn set_start_at_login(enabled: bool) -> Result<()> {
     let (run, _) =
         current_user.create_subkey("Software\\Microsoft\\Windows\\CurrentVersion\\Run")?;
     if enabled {
-        let executable = std::env::current_exe()?;
-        let command = format!("\"{}\" --startup", executable.display());
+        let command = format!("\"{}\" --startup", startup_executable()?.display());
         run.set_value(STARTUP_VALUE_NAME, &command)?;
     } else if let Err(error) = run.delete_value(STARTUP_VALUE_NAME)
         && error.kind() != ErrorKind::NotFound
@@ -43,6 +42,15 @@ pub fn set_start_at_login(enabled: bool) -> Result<()> {
         return Err(error.into());
     }
     Ok(())
+}
+
+/// Prefer the tray launcher beside the server so signing in starts FeltnerAI
+/// without a console window; fall back to the server binary itself.
+#[cfg(windows)]
+fn startup_executable() -> Result<std::path::PathBuf> {
+    let executable = std::env::current_exe()?;
+    let tray = executable.with_file_name("feltnerai-tray.exe");
+    Ok(if tray.exists() { tray } else { executable })
 }
 
 #[cfg(not(windows))]

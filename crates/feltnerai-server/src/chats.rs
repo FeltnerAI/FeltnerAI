@@ -296,6 +296,17 @@ async fn start_generation(
                 while let Some(delta) = stream.next().await {
                     match delta {
                         Ok(delta) => {
+                            // Some models emit leading newlines before their first
+                            // token; drop them so the message does not render with
+                            // a gap above its text on every client.
+                            let delta = if content.is_empty() {
+                                delta.trim_start().to_owned()
+                            } else {
+                                delta
+                            };
+                            if delta.is_empty() {
+                                continue;
+                            }
                             content.push_str(&delta);
                             if persist_assistant(&worker_state, assistant_id, &content, "streaming")
                                 .await

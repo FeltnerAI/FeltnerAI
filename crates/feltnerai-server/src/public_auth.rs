@@ -260,8 +260,22 @@ pub async fn logout(
     Ok(response)
 }
 
-pub async fn current_session(Extension(session): Extension<AuthSession>) -> Json<User> {
-    Json(session.user)
+pub async fn current_session(
+    State(state): State<AppState>,
+    Extension(session): Extension<AuthSession>,
+) -> AppResult<Json<SessionResponse>> {
+    // Cookie sessions need a CSRF token for later mutations; re-mint one on
+    // every restore so a reopened browser is never left without it.
+    let csrf_token = match session.kind {
+        AuthKind::Cookie => Some(crate::auth::rotate_csrf(&state, session.session_id).await?),
+        AuthKind::Bearer => None,
+    };
+    Ok(Json(SessionResponse {
+        csrf_token,
+        bearer_token: None,
+        expires_at: session.expires_at,
+        user: session.user,
+    }))
 }
 
 pub async fn update_preferences(

@@ -8,9 +8,12 @@ Build the React bundle before the server so it is embedded in the binary:
 bun install --cwd frontend --frozen-lockfile
 bun run --cwd frontend build
 cargo build --release -p feltnerai-server
+cargo build --release -p feltnerai-tray
 ```
 
-The resulting `target/release/feltnerai-server` binary serves both `/api/v1` and the web application. On Windows it also runs a system-tray menu with **Open in browser** and **Exit** actions.
+The resulting `target/release/feltnerai-server` binary serves both `/api/v1` and the web application. It is a plain console application and is the main program on every platform.
+
+On Windows, `feltnerai-tray.exe` is a small wrapper placed beside the server. Launching it starts `feltnerai-server.exe` without a console window and shows a system-tray menu with **Open in browser** and **Exit** actions. Keep both executables in the same directory. Run the server binary directly for headless or service deployments.
 
 ## Environment
 
@@ -33,7 +36,7 @@ Without an override, FeltnerAI follows operating-system conventions:
 
 When an upgraded server first starts with the new default, it looks for a legacy `data` directory beside the executable and in the working directory. If found, it copies that directory into the OS location and preserves the legacy copy as an extra safeguard.
 
-On Windows, administrators can enable or disable **Open FeltnerAI Server when I sign in to Windows** from **Admin → Server**. This registers the current executable under the current user's standard Windows `Run` key.
+On Windows, administrators can enable or disable **Open FeltnerAI Server when I sign in to Windows** from **Admin → Server**. This registers the tray launcher (`feltnerai-tray.exe`, falling back to the server binary if it is absent) under the current user's standard Windows `Run` key, so sign-in starts FeltnerAI without a console window.
 
 ## TLS Reverse Proxy
 
@@ -89,8 +92,8 @@ Tauri emits platform installers under `target/release/bundle`. v1 has no in-app 
 
 Executable icon sources live at:
 
-- `crates/feltnerai-server/icons/icon.ico` for the Windows server executable;
-- `crates/feltnerai-server/icons/icon.png` for the Windows tray;
+- `crates/feltnerai-server/icons/icon.ico` for the Windows server and tray executables;
+- `crates/feltnerai-server/icons/icon.png` for the Windows tray menu icon;
 - `crates/feltnerai-portal/icons/icon.ico` and `icon.png` for Portal packaging.
 
 Portal stores profiles in its application data directory and session credentials in the operating system credential manager. If secure storage is unavailable, the session remains in memory only and the user must sign in again after Portal closes.

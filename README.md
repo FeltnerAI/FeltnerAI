@@ -12,7 +12,7 @@ FeltnerAI is a private, self-hosted chat server for OpenAI-compatible providers.
 - User, provider, model, server, and branding administration
 - Per-account light, dark, and system theme preferences
 - Admin ZIP backup/restore and Windows start-at-login controls
-- Windows server tray with browser and clean-exit actions
+- Windows tray launcher (`feltnerai-tray`) that runs the server without a console window
 - Browser and Windows/macOS/Linux Portal clients from one React bundle
 - SQLite WAL storage in the operating system's persistent user-data directory
 

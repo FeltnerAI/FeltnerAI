@@ -277,7 +277,10 @@ async fn full_server_workflow_enforces_security_and_streams() {
             false,
         )
         .await;
-    assert_eq!(Harness::json(persisted_preferences).await["theme"], "dark");
+    assert_eq!(
+        Harness::json(persisted_preferences).await["user"]["theme"],
+        "dark"
+    );
 
     let providers = harness
         .request(
@@ -519,7 +522,7 @@ async fn full_server_workflow_enforces_security_and_streams() {
                         )
                         .await
                 )
-                .await["id"]
+                .await["user"]["id"]
                     .as_str()
                     .unwrap()
             ),

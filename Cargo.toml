@@ -4,6 +4,7 @@ members = [
   "crates/feltnerai-core",
   "crates/feltnerai-provider-openai",
   "crates/feltnerai-server",
+  "crates/feltnerai-tray",
   "crates/feltnerai-portal",
 ]
 resolver = "2"

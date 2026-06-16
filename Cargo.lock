@@ -1356,7 +1356,6 @@ dependencies = [
  "futures",
  "http",
  "http-body-util",
- "image",
  "mime_guess",
  "rand 0.9.4",
  "rust-embed",
@@ -1373,14 +1372,23 @@ dependencies = [
  "tower-http",
  "tracing",
  "tracing-subscriber",
- "tray-icon 0.24.1",
  "url",
  "uuid",
- "webbrowser",
- "winit",
  "winreg 0.56.0",
  "winresource",
  "zip",
+]
+
+[[package]]
+name = "feltnerai-tray"
+version = "1.0.0"
+dependencies = [
+ "anyhow",
+ "image",
+ "tray-icon 0.24.1",
+ "webbrowser",
+ "winit",
+ "winresource",
 ]
 
 [[package]]

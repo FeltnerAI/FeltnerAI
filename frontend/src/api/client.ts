@@ -16,14 +16,16 @@ type RuntimeConfig = {
 const runtime: RuntimeConfig = {
   baseUrl: "",
   bearerToken: null,
-  csrfToken: sessionStorage.getItem("feltnerai.csrf"),
+  // Persist in localStorage so the token survives the browser being closed and
+  // reopened while the session cookie is still valid.
+  csrfToken: localStorage.getItem("feltnerai.csrf"),
 };
 
 export function configureApi(config: Partial<RuntimeConfig>) {
   Object.assign(runtime, config);
-  if (config.csrfToken === null) sessionStorage.removeItem("feltnerai.csrf");
+  if (config.csrfToken === null) localStorage.removeItem("feltnerai.csrf");
   else if (config.csrfToken)
-    sessionStorage.setItem("feltnerai.csrf", config.csrfToken);
+    localStorage.setItem("feltnerai.csrf", config.csrfToken);
 }
 
 export function apiBaseUrl() {

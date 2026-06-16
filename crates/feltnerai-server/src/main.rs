@@ -12,9 +12,6 @@ use tokio::{
 };
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
-#[cfg(windows)]
-mod windows_tray;
-
 #[tokio::main]
 async fn main() -> Result<()> {
     let config = Config::from_env()?;
@@ -33,8 +30,6 @@ async fn main() -> Result<()> {
 
     let (control_tx, control_rx) = mpsc::unbounded_channel();
     let control_rx = Arc::new(Mutex::new(control_rx));
-    #[cfg(windows)]
-    let tray = windows_tray::WindowsTray::start(control_tx.clone(), browser_url(config.bind))?;
 
     loop {
         if backup::apply_pending_restore(&config.data_dir).await? {
@@ -76,8 +71,6 @@ async fn main() -> Result<()> {
         tracing::info!("restarting FeltnerAI to apply imported data");
     }
 
-    #[cfg(windows)]
-    tray.shutdown();
     Ok(())
 }
 
@@ -115,16 +108,4 @@ async fn shutdown_signal(
         },
         Ordering::SeqCst,
     );
-}
-
-#[cfg(windows)]
-fn browser_url(bind: std::net::SocketAddr) -> String {
-    let host = if bind.ip().is_unspecified() {
-        "127.0.0.1".into()
-    } else if bind.ip().is_ipv6() {
-        format!("[{}]", bind.ip())
-    } else {
-        bind.ip().to_string()
-    };
-    format!("http://{host}:{}", bind.port())
 }
