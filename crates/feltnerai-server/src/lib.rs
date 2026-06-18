@@ -4,6 +4,7 @@ mod auth;
 pub mod backup;
 mod chats;
 mod error;
+mod lmstudio;
 mod platform;
 mod public_auth;
 mod state;
@@ -16,7 +17,7 @@ use axum::{
     extract::DefaultBodyLimit,
     http::{HeaderValue, Method, header},
     middleware,
-    routing::{delete, get, patch, post, put},
+    routing::{get, patch, post, put},
 };
 use feltnerai_core::{
     config::Config,
@@ -122,11 +123,18 @@ pub fn router(state: AppState) -> Router {
             post(admin::configure_model),
         )
         .route("/admin/models", get(admin::list_models))
-        .route("/admin/models/{model_id}", delete(admin::delete_model))
+        .route(
+            "/admin/models/{model_id}",
+            patch(admin::update_model).delete(admin::delete_model),
+        )
         .route(
             "/admin/server",
             get(admin::get_server_settings).put(admin::update_server_settings),
         )
+        .route("/admin/lmstudio/status", get(lmstudio::status))
+        .route("/admin/lmstudio/server", post(lmstudio::server))
+        .route("/admin/lmstudio/models/load", post(lmstudio::load))
+        .route("/admin/lmstudio/models/unload", post(lmstudio::unload))
         .route("/admin/data/export", get(backup::export_data))
         .route(
             "/admin/data/import",

@@ -31,9 +31,11 @@ futures = "0.3"
 hex = "0.4"
 http = "1"
 http-body-util = "0.1"
+ignore = "0.4"
 keyring = { version = "3", features = ["windows-native", "apple-native", "sync-secret-service"] }
 mime_guess = "2"
 rand = "0.9"
+regex = "1"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }
 rust-embed = { version = "8", features = ["interpolate-folder-path"] }
 secrecy = { version = "0.10", features = ["serde"] }
@@ -44,6 +46,7 @@ sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "sqlite", "chrono"
 subtle = "2"
 tauri = { version = "2", features = [] }
 tauri-build = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
 thiserror = "2"
 tokio = { version = "1", features = ["full"] }
 tokio-stream = "0.1"

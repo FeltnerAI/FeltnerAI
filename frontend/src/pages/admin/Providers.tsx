@@ -3,11 +3,13 @@ import { Pencil, Plus, Radio, Trash2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { api } from "../../api/client";
 import type { ConnectionTestResponse, Provider } from "../../api/generated";
+import { useFeedback } from "../../components/feedback";
 import { Button, ErrorNotice, Input, Modal } from "../../components/ui";
 import { AdminPage } from "./Users";
 
 export function AdminProvidersPage() {
   const queryClient = useQueryClient();
+  const { confirm, toast } = useFeedback();
   const providers = useQuery({
     queryKey: ["admin", "providers"],
     queryFn: () => api<Provider[]>("/admin/providers"),
@@ -37,10 +39,16 @@ export function AdminProvidersPage() {
     await queryClient.invalidateQueries({ queryKey: ["admin", "providers"] });
   }
   async function remove(provider: Provider) {
-    if (!confirm(`Delete provider ${provider.name} and its configured models?`))
-      return;
+    const ok = await confirm({
+      title: `Delete ${provider.name}?`,
+      message: "This also removes every model configured under this provider.",
+      confirmText: "Delete provider",
+      danger: true,
+    });
+    if (!ok) return;
     await api(`/admin/providers/${provider.id}`, { method: "DELETE" });
     await queryClient.invalidateQueries({ queryKey: ["admin", "providers"] });
+    toast(`Deleted ${provider.name}.`, "success");
   }
   return (
     <AdminPage
@@ -54,7 +62,7 @@ export function AdminProvidersPage() {
       </div>
       <div className="grid gap-4">
         {providers.data?.map((provider) => (
-          <article className="panel rounded-2xl p-5" key={provider.id}>
+          <article className="card rounded-2xl p-5" key={provider.id}>
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h2 className="text-lg font-bold">{provider.name}</h2>

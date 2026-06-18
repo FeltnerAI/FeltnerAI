@@ -252,6 +252,15 @@ pub struct ConfigureModelRequest {
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS, ToSchema)]
 #[ts(export)]
+pub struct UpdateModelRequest {
+    pub upstream_id: Option<String>,
+    pub display_name: Option<String>,
+    pub enabled: Option<bool>,
+    pub is_default: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS, ToSchema)]
+#[ts(export)]
 pub struct Chat {
     #[ts(type = "string")]
     pub id: Uuid,
@@ -354,6 +363,10 @@ pub struct ServerSettings {
     pub data_dir: String,
     pub startup_supported: bool,
     pub start_at_login: bool,
+    /// Optional override for the LM Studio CLI (`lms`) executable path. When
+    /// unset the server auto-detects `lms` on PATH and in default install
+    /// locations.
+    pub lmstudio_cli_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS, ToSchema)]
@@ -362,6 +375,8 @@ pub struct UpdateServerSettingsRequest {
     pub public_url: Option<String>,
     pub trusted_proxies: Option<Vec<String>>,
     pub start_at_login: Option<bool>,
+    /// Set to `Some("")` to clear the override and fall back to auto-detection.
+    pub lmstudio_cli_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS, ToSchema)]
@@ -384,4 +399,68 @@ pub struct ImportDataResponse {
 pub struct ApiError {
     pub code: String,
     pub message: String,
+}
+
+/// A single model known to the local LM Studio installation.
+#[derive(Debug, Clone, Serialize, Deserialize, TS, ToSchema)]
+#[ts(export)]
+pub struct LmStudioModel {
+    /// Identifier passed to `lms load`/`lms unload` (the model key/path).
+    pub id: String,
+    /// Friendly display name when LM Studio reports one.
+    pub display_name: Option<String>,
+    /// Size on disk in bytes when known.
+    #[ts(type = "number | null")]
+    pub size_bytes: Option<u64>,
+}
+
+/// Aggregated state of the local LM Studio CLI and runtime.
+#[derive(Debug, Clone, Serialize, Deserialize, TS, ToSchema)]
+#[ts(export)]
+pub struct LmStudioStatus {
+    /// Whether the `lms` executable could be located and invoked.
+    pub cli_available: bool,
+    /// Resolved path to the `lms` executable, when found.
+    pub cli_path: Option<String>,
+    /// `lms version` output, when available.
+    pub version: Option<String>,
+    /// Whether the LM Studio local OpenAI-compatible server is running.
+    pub server_running: bool,
+    /// Base URL of the LM Studio local server when running.
+    pub server_url: Option<String>,
+    /// Models downloaded and available to load.
+    pub downloaded: Vec<LmStudioModel>,
+    /// Models currently loaded into memory.
+    pub loaded: Vec<LmStudioModel>,
+    /// Human-readable note (e.g. install hint) surfaced to admins.
+    pub message: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, TS, ToSchema)]
+#[serde(rename_all = "snake_case")]
+#[ts(export)]
+pub enum LmStudioServerAction {
+    Start,
+    Stop,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS, ToSchema)]
+#[ts(export)]
+pub struct LmStudioServerRequest {
+    pub action: LmStudioServerAction,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS, ToSchema)]
+#[ts(export)]
+pub struct LmStudioLoadRequest {
+    pub model: String,
+    #[ts(type = "number | null")]
+    pub context_length: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS, ToSchema)]
+#[ts(export)]
+pub struct LmStudioUnloadRequest {
+    /// Specific model to unload, or `None` to unload everything.
+    pub model: Option<String>,
 }

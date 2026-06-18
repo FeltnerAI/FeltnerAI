@@ -3,6 +3,9 @@ use std::{fs, path::PathBuf};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 
+mod projects;
+mod tools;
+
 const CREDENTIAL_SERVICE: &str = "FeltnerAI Portal";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -114,13 +117,24 @@ fn delete_credential(server_uuid: String) -> Result<(), String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             list_profiles,
             save_profile,
             delete_profile,
             store_credential,
             load_credential,
-            delete_credential
+            delete_credential,
+            projects::list_projects,
+            projects::save_project,
+            projects::delete_project,
+            projects::pick_directory,
+            tools::agent_read_file,
+            tools::agent_write_file,
+            tools::agent_edit_file,
+            tools::agent_list_files,
+            tools::agent_search,
+            tools::agent_run_command,
         ])
         .run(tauri::generate_context!())
         .expect("failed to run FeltnerAI Portal");

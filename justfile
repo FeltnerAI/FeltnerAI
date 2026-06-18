@@ -1,7 +1,17 @@
-set shell := ["powershell.exe", "-NoLogo", "-Command"]
+set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
 
 default:
     @just --list
+
+[group('dev')]
+[unix]
+setup:
+    bash scripts/setup.sh
+
+[group('dev')]
+[windows]
+setup:
+    & scripts/setup.ps1
 
 [group('dev')]
 dev:
@@ -50,6 +60,14 @@ portal:
     bun run --cwd frontend tauri build
 
 [group('build')]
+[unix]
+clean:
+    cargo clean
+    rm -rf frontend/dist frontend/test-results frontend/playwright-report frontend/node_modules/.vite
+    rm -f frontend/*.tsbuildinfo
+
+[group('build')]
+[windows]
 clean:
     cargo clean
     if (Test-Path frontend/dist) { Remove-Item -Recurse -Force frontend/dist }

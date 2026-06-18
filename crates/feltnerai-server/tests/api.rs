@@ -673,3 +673,136 @@ async fn full_server_workflow_enforces_security_and_streams() {
 
     provider_task.abort();
 }
+
+#[tokio::test]
+async fn editing_models_updates_fields_and_guards_conflicts() {
+    let (provider_url, provider_task) = mock_provider().await;
+    let harness = Harness::new().await;
+    let admin = setup_and_login(&harness, &provider_url).await;
+
+    let providers = harness
+        .request(
+            Method::GET,
+            "/api/v1/admin/providers",
+            None,
+            Some(&admin),
+            false,
+        )
+        .await;
+    let provider_id = Harness::json(providers).await[0]["id"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+
+    let good = configure_model(&harness, &admin, &provider_id, "good-model", true).await;
+    let other = configure_model(&harness, &admin, &provider_id, "malformed-model", false).await;
+
+    // Rename and keep enabled/default state.
+    let renamed = harness
+        .request(
+            Method::PATCH,
+            &format!("/api/v1/admin/models/{good}"),
+            Some(json!({"display_name": "Renamed Model"})),
+            Some(&admin),
+            false,
+        )
+        .await;
+    assert_eq!(renamed.status(), StatusCode::OK);
+    let renamed = Harness::json(renamed).await;
+    assert_eq!(renamed["display_name"], "Renamed Model");
+    assert_eq!(renamed["upstream_id"], "good-model");
+    assert_eq!(renamed["is_default"], true);
+
+    // Promoting another model to default demotes the previous one.
+    let promoted = harness
+        .request(
+            Method::PATCH,
+            &format!("/api/v1/admin/models/{other}"),
+            Some(json!({"is_default": true})),
+            Some(&admin),
+            false,
+        )
+        .await;
+    assert_eq!(promoted.status(), StatusCode::OK);
+    let models = harness
+        .request(
+            Method::GET,
+            "/api/v1/admin/models",
+            None,
+            Some(&admin),
+            false,
+        )
+        .await;
+    let defaults = Harness::json(models)
+        .await
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|model| model["is_default"] == true)
+        .count();
+    assert_eq!(defaults, 1);
+
+    // Renaming an upstream id onto an existing one for the provider conflicts.
+    let conflict = harness
+        .request(
+            Method::PATCH,
+            &format!("/api/v1/admin/models/{good}"),
+            Some(json!({"upstream_id": "malformed-model"})),
+            Some(&admin),
+            false,
+        )
+        .await;
+    assert_eq!(conflict.status(), StatusCode::CONFLICT);
+
+    // Editing requires an admin session.
+    let unauthorized = harness
+        .request(
+            Method::PATCH,
+            &format!("/api/v1/admin/models/{good}"),
+            Some(json!({"display_name": "Nope"})),
+            None,
+            false,
+        )
+        .await;
+    assert_eq!(unauthorized.status(), StatusCode::UNAUTHORIZED);
+
+    provider_task.abort();
+}
+
+#[tokio::test]
+async fn lmstudio_status_requires_admin_and_reports_cli() {
+    let (provider_url, provider_task) = mock_provider().await;
+    let harness = Harness::new().await;
+    let admin = setup_and_login(&harness, &provider_url).await;
+
+    // Unauthenticated callers are rejected.
+    let unauthorized = harness
+        .request(
+            Method::GET,
+            "/api/v1/admin/lmstudio/status",
+            None,
+            None,
+            false,
+        )
+        .await;
+    assert_eq!(unauthorized.status(), StatusCode::UNAUTHORIZED);
+
+    // Admins always get a well-formed status payload, whether or not `lms`
+    // happens to be installed on the host running the tests.
+    let status = harness
+        .request(
+            Method::GET,
+            "/api/v1/admin/lmstudio/status",
+            None,
+            Some(&admin),
+            false,
+        )
+        .await;
+    assert_eq!(status.status(), StatusCode::OK);
+    let body = Harness::json(status).await;
+    assert!(body["cli_available"].is_boolean());
+    assert!(body["downloaded"].is_array());
+    assert!(body["loaded"].is_array());
+
+    provider_task.abort();
+}

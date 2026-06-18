@@ -18,10 +18,10 @@ FeltnerAI is a private, self-hosted chat server for OpenAI-compatible providers.
 
 ## Quick Start
 
-Requirements: Rust 1.96+, Bun 1.3+, and `just`.
+Requirements: Rust 1.96+, Bun 1.3+, and `just`. Run `just setup` to install project dependencies and verify system prerequisites.
 
 ```powershell
-bun install --cwd frontend
+just setup
 bun run --cwd frontend build
 cargo run -p feltnerai-server
 ```
@@ -40,6 +40,7 @@ Vite serves `http://127.0.0.1:5173` and proxies `/api` to the server.
 ## Commands
 
 ```text
+just setup        Install project deps and verify system prerequisites
 just generate-api  Generate tracked TypeScript API definitions
 just format        Format Rust and frontend sources
 just check         Run formatting, Clippy, Rust tests, frontend checks/tests/build

@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { KeyRound, Plus, Trash2 } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { api } from "../../api/client";
 import type { Role, User } from "../../api/generated";
+import { useFeedback } from "../../components/feedback";
 import { Button, ErrorNotice, Input, Modal, Select } from "../../components/ui";
 
 export function AdminUsersPage() {
@@ -13,6 +14,7 @@ export function AdminUsersPage() {
   });
   const [creating, setCreating] = useState(false);
   const [resetUser, setResetUser] = useState<User | null>(null);
+  const { confirm, toast } = useFeedback();
   const update = useMutation({
     mutationFn: ({ id, body }: { id: string; body: object }) =>
       api<User>(`/admin/users/${id}`, {
@@ -23,10 +25,16 @@ export function AdminUsersPage() {
       queryClient.invalidateQueries({ queryKey: ["admin", "users"] }),
   });
   async function remove(user: User) {
-    if (!confirm(`Delete ${user.username}? This also deletes their chats.`))
-      return;
+    const ok = await confirm({
+      title: `Delete ${user.username}?`,
+      message: "This also permanently deletes the user's chats.",
+      confirmText: "Delete user",
+      danger: true,
+    });
+    if (!ok) return;
     await api<void>(`/admin/users/${user.id}`, { method: "DELETE" });
     await queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+    toast(`Deleted ${user.username}.`, "success");
   }
   return (
     <AdminPage
@@ -260,12 +268,12 @@ export function AdminPage({
 }: {
   title: string;
   description: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <div className="mx-auto max-w-6xl p-5 py-10">
-      <h1 className="text-3xl font-bold">{title}</h1>
-      <p className="mt-2 text-[var(--muted)]">{description}</p>
+      <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
+      <p className="mt-2 max-w-2xl text-[var(--muted)]">{description}</p>
       <div className="mt-7">{children}</div>
     </div>
   );

@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { api, apiBlob } from "../../api/client";
 import type { ImportDataResponse, ServerSettings } from "../../api/generated";
+import { useFeedback } from "../../components/feedback";
 import { Button, ErrorNotice, Input } from "../../components/ui";
 import { AdminPage } from "./Users";
 
@@ -39,9 +40,11 @@ function ServerForm({
   settings: ServerSettings;
   onSaved: () => Promise<unknown>;
 }) {
+  const { confirm, toast } = useFeedback();
   const [publicUrl, setPublicUrl] = useState(settings.public_url ?? "");
   const [proxies, setProxies] = useState(settings.trusted_proxies.join(", "));
   const [startAtLogin, setStartAtLogin] = useState(settings.start_at_login);
+  const [lmsPath, setLmsPath] = useState(settings.lmstudio_cli_path ?? "");
   const [saved, setSaved] = useState(false);
   const [backupMessage, setBackupMessage] = useState("");
   const [backupBusy, setBackupBusy] = useState(false);
@@ -58,10 +61,13 @@ function ServerForm({
             .map((value) => value.trim())
             .filter(Boolean),
           start_at_login: startAtLogin,
+          // Empty string clears the override and restores auto-detection.
+          lmstudio_cli_path: lmsPath.trim(),
         }),
       });
       setSaved(true);
       setError(null);
+      toast("Server settings saved.", "success");
       await onSaved();
     } catch (caught) {
       setError(caught);
@@ -86,13 +92,14 @@ function ServerForm({
     }
   }
   async function importBackup(file: File) {
-    if (
-      !confirm(
-        "Importing this backup replaces every user, provider, model, chat, message, and server setting. FeltnerAI will restart. Continue?",
-      )
-    ) {
-      return;
-    }
+    const ok = await confirm({
+      title: "Restore from backup?",
+      message:
+        "This replaces every user, provider, model, chat, message, and server setting, then restarts FeltnerAI.",
+      confirmText: "Import and restart",
+      danger: true,
+    });
+    if (!ok) return;
     setBackupBusy(true);
     setError(null);
     setBackupMessage("");
@@ -140,6 +147,13 @@ function ServerForm({
           value={settings.data_dir}
           readOnly
           hint="Database, encryption key, staged imports, and rollback data live here."
+        />
+        <Input
+          label="LM Studio CLI path"
+          value={lmsPath}
+          onChange={(e) => setLmsPath(e.target.value)}
+          placeholder="Auto-detect (lms on PATH)"
+          hint="Optional override for the `lms` executable used by the LM Studio page. Leave blank to auto-detect."
         />
         <label className="flex items-center gap-3 text-sm font-semibold">
           <input

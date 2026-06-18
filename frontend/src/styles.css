@@ -1,41 +1,64 @@
 @import "tailwindcss";
 
+/*
+ * FeltnerAI — "Aurora glass" identity.
+ * Dark-first canvas with a configurable brand accent. The accent is injected at
+ * runtime (see contexts.tsx `useBranding`); every gradient/glow derives from it
+ * so admin branding still flows through the whole UI.
+ */
+
 :root {
   font-family:
-    Inter,
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
-  color: #191925;
-  background: #f5f5fb;
+    "Inter var", Inter, ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #1b1b27;
+  background: #eef0f8;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Brand accent (overridden at runtime). */
   --accent: #6d5dfc;
   --accent-contrast: #ffffff;
-  --panel: rgba(255, 255, 255, 0.82);
+  /* Blend the brand accent toward cyan for the signature aurora gradient. */
+  --accent-2: color-mix(in srgb, var(--accent) 42%, #22d3ee);
+  --accent-grad: linear-gradient(135deg, var(--accent), var(--accent-2));
+  --accent-soft: color-mix(in srgb, var(--accent) 14%, transparent);
+  --glow: color-mix(in srgb, var(--accent) 45%, transparent);
+
+  /* Light surfaces. */
+  --panel: rgba(255, 255, 255, 0.66);
+  --panel-strong: rgba(255, 255, 255, 0.86);
   --panel-solid: #ffffff;
   --elevated: #ffffff;
-  --muted: #6d6d7c;
-  --border: #e4e4ee;
-  --ring: color-mix(in srgb, var(--accent) 32%, transparent);
-  --danger: #c83548;
-  --shadow: 0 18px 48px -16px rgba(16, 16, 40, 0.22);
+  --muted: #61617a;
+  --border: rgba(20, 20, 50, 0.1);
+  --border-strong: rgba(20, 20, 50, 0.16);
+  --ring: color-mix(in srgb, var(--accent) 34%, transparent);
+  --danger: #d23a52;
+  --shadow: 0 24px 60px -28px rgba(24, 22, 60, 0.4);
+  --highlight: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+
+  color-scheme: light;
 }
 
 :root.dark {
-  color: #f4f3fb;
-  background: #0c0c12;
-  --panel: rgba(24, 24, 34, 0.72);
-  --panel-solid: #16161f;
-  --elevated: #1d1d29;
-  --muted: #a7a5b6;
-  --border: #2c2c39;
-  --shadow: 0 24px 60px -18px rgba(0, 0, 0, 0.65);
+  color: #f3f3fb;
+  background: #07070d;
+  --accent-contrast: #ffffff;
+  --panel: rgba(22, 22, 34, 0.55);
+  --panel-strong: rgba(26, 26, 40, 0.82);
+  --panel-solid: #14141d;
+  --elevated: #1b1b27;
+  --muted: #9c9bb4;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --danger: #ff6b81;
+  --shadow: 0 32px 80px -32px rgba(0, 0, 0, 0.8);
+  --highlight: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  color-scheme: dark;
 }
 
 * {
@@ -46,18 +69,47 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  position: relative;
+  /* Layered aurora wash, fixed so it stays put while content scrolls. */
   background:
     radial-gradient(
-      circle at 12% -5%,
-      color-mix(in srgb, var(--accent) 16%, transparent),
-      transparent 38rem
+      42rem 32rem at 8% -8%,
+      color-mix(in srgb, var(--accent) 22%, transparent),
+      transparent 70%
     ),
     radial-gradient(
-      circle at 95% 0%,
-      color-mix(in srgb, var(--accent) 9%, transparent),
-      transparent 32rem
+      38rem 30rem at 102% 4%,
+      color-mix(in srgb, var(--accent-2) 20%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      46rem 40rem at 60% 108%,
+      color-mix(in srgb, var(--accent) 12%, transparent),
+      transparent 72%
     ),
     inherit;
+  background-attachment: fixed;
+}
+
+:root.dark body {
+  background:
+    radial-gradient(
+      44rem 34rem at 6% -10%,
+      color-mix(in srgb, var(--accent) 30%, transparent),
+      transparent 68%
+    ),
+    radial-gradient(
+      40rem 32rem at 104% 2%,
+      color-mix(in srgb, var(--accent-2) 26%, transparent),
+      transparent 66%
+    ),
+    radial-gradient(
+      52rem 44rem at 58% 112%,
+      color-mix(in srgb, var(--accent) 16%, transparent),
+      transparent 70%
+    ),
+    inherit;
+  background-attachment: fixed;
 }
 
 button,
@@ -80,14 +132,14 @@ a:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
 [role="combobox"]:focus-visible {
-  outline: 3px solid var(--ring);
+  outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
 
 /* Quiet, theme-aware scrollbars. */
 * {
   scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--muted) 45%, transparent) transparent;
+  scrollbar-color: color-mix(in srgb, var(--muted) 40%, transparent) transparent;
 }
 
 *::-webkit-scrollbar {
@@ -96,49 +148,88 @@ textarea:focus-visible,
 }
 
 *::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--muted) 40%, transparent);
+  background: color-mix(in srgb, var(--muted) 38%, transparent);
   border: 3px solid transparent;
   border-radius: 999px;
   background-clip: padding-box;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--muted) 65%, transparent);
+  background: color-mix(in srgb, var(--muted) 60%, transparent);
   background-clip: padding-box;
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--accent) 28%, transparent);
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
 }
+
+/* ---- Surfaces ------------------------------------------------------------ */
 
 .panel {
   background: var(--panel);
   border: 1px solid var(--border);
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(20px) saturate(140%);
+  box-shadow: var(--shadow), var(--highlight);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
 }
+
+.panel-strong {
+  background: var(--panel-strong);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow), var(--highlight);
+  backdrop-filter: blur(26px) saturate(160%);
+  -webkit-backdrop-filter: blur(26px) saturate(160%);
+}
+
+/* Frosted top/bottom bars (iOS-style translucent chrome). */
+.frosted-bar {
+  background: color-mix(in srgb, var(--panel-solid) 62%, transparent);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+}
+
+/* Hairline card used across admin lists. */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 1.1rem;
+  box-shadow: var(--highlight);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  transition:
+    border-color 0.18s ease,
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.card:hover {
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+}
+
+/* ---- Form controls ------------------------------------------------------- */
 
 .field {
   width: 100%;
-  border: 1px solid var(--border);
-  border-radius: 0.8rem;
-  padding: 0.72rem 0.85rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 0.85rem;
+  padding: 0.72rem 0.9rem;
   color: inherit;
-  background: var(--panel-solid);
+  background: color-mix(in srgb, var(--panel-solid) 70%, transparent);
   transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease,
-    background 0.15s ease;
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    background 0.16s ease;
 }
 
 .field:hover {
-  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--border-strong));
 }
 
 .field:focus,
 .field:focus-visible {
   border-color: var(--accent);
   outline: none;
+  background: var(--panel-solid);
   box-shadow: 0 0 0 3px var(--ring);
 }
 
@@ -166,27 +257,124 @@ input[type="color"]::-moz-color-swatch {
   border-radius: 0.55rem;
 }
 
+/* Brand gradient text used for wordmarks/headings. */
+.text-gradient {
+  background: var(--accent-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---- Chat markdown ------------------------------------------------------- */
+
 .prose-message {
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
   line-height: 1.7;
   font-size: 0.975rem;
 }
 
+.prose-message > :first-child {
+  margin-top: 0;
+}
+
+.prose-message > :last-child {
+  margin-bottom: 0;
+}
+
+.prose-message p {
+  margin: 0.6rem 0;
+}
+
+.prose-message ul,
+.prose-message ol {
+  margin: 0.6rem 0;
+  padding-left: 1.4rem;
+}
+
+.prose-message li {
+  margin: 0.2rem 0;
+}
+
+.prose-message h1,
+.prose-message h2,
+.prose-message h3 {
+  margin: 1.1rem 0 0.5rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.prose-message h1 {
+  font-size: 1.3rem;
+}
+.prose-message h2 {
+  font-size: 1.15rem;
+}
+.prose-message h3 {
+  font-size: 1.03rem;
+}
+
+.prose-message a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .prose-message code {
-  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas,
-    monospace;
+  font-family:
+    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.85em;
   padding: 0.12em 0.4em;
   border-radius: 0.4rem;
-  background: color-mix(in srgb, var(--muted) 16%, transparent);
+  background: color-mix(in srgb, var(--muted) 18%, transparent);
 }
 
-/* Subtle entrance for newly rendered message bubbles. */
+.prose-message pre {
+  margin: 0.7rem 0;
+  padding: 0.9rem 1rem;
+  border-radius: 0.8rem;
+  overflow-x: auto;
+  background: color-mix(in srgb, #000 55%, var(--elevated));
+  border: 1px solid var(--border);
+}
+
+:root:not(.dark) .prose-message pre {
+  background: color-mix(in srgb, var(--muted) 12%, #fff);
+}
+
+.prose-message pre code {
+  background: none;
+  padding: 0;
+  font-size: 0.85em;
+  line-height: 1.6;
+}
+
+.prose-message blockquote {
+  margin: 0.6rem 0;
+  padding-left: 0.9rem;
+  border-left: 3px solid color-mix(in srgb, var(--accent) 60%, transparent);
+  color: var(--muted);
+}
+
+.prose-message table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.7rem 0;
+  font-size: 0.9rem;
+}
+
+.prose-message th,
+.prose-message td {
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+}
+
+/* ---- Motion -------------------------------------------------------------- */
+
 @keyframes message-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -195,11 +383,81 @@ input[type="color"]::-moz-color-swatch {
 }
 
 .message-in {
-  animation: message-in 0.22s ease-out;
+  animation: message-in 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Centering is handled by the `translate` property (Tailwind v4's
+   `-translate-x/y-1/2`), so this keyframe must only touch `transform`; mixing a
+   `translate(-50%, …)` in here would stack on top of that and make the dialog
+   start off-center and snap to the middle when the animation clears. */
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-overlay[data-state="open"] {
+  animation: overlay-in 0.18s ease-out;
+}
+
+.animate-dialog[data-state="open"] {
+  animation: dialog-in 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.toast-in {
+  animation: toast-in 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Shimmer skeleton placeholder. */
+@keyframes skeleton-sheen {
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton {
+  border-radius: 0.6rem;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--muted) 14%, transparent) 0%,
+    color-mix(in srgb, var(--muted) 26%, transparent) 50%,
+    color-mix(in srgb, var(--muted) 14%, transparent) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-sheen 1.3s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .message-in {
+  .message-in,
+  .toast-in,
+  .skeleton,
+  .animate-overlay[data-state="open"],
+  .animate-dialog[data-state="open"] {
     animation: none;
   }
 }

@@ -7,11 +7,13 @@
 - `just`
 - Platform prerequisites for Tauri v2
 
-Install dependencies:
+Run setup to install project dependencies and report missing system tools:
 
 ```powershell
-bun install --cwd frontend
+just setup
 ```
+
+Setup installs frontend packages, Playwright Chromium, and fetches Rust crates. On Linux it checks GTK/WebKit pkg-config modules needed for `just portal`. On Windows it checks WebView2 and MSVC build tools. On macOS it checks Xcode Command Line Tools.
 
 ## Run
 

@@ -231,6 +231,108 @@
           }
         }
       },
+      "LmStudioLoadRequest": {
+        "type": "object",
+        "required": ["model"],
+        "properties": {
+          "context_length": {
+            "type": ["integer", "null"],
+            "format": "int32",
+            "minimum": 0
+          },
+          "model": {
+            "type": "string"
+          }
+        }
+      },
+      "LmStudioModel": {
+        "type": "object",
+        "description": "A single model known to the local LM Studio installation.",
+        "required": ["id"],
+        "properties": {
+          "display_name": {
+            "type": ["string", "null"],
+            "description": "Friendly display name when LM Studio reports one."
+          },
+          "id": {
+            "type": "string",
+            "description": "Identifier passed to `lms load`/`lms unload` (the model key/path)."
+          },
+          "size_bytes": {
+            "type": ["integer", "null"],
+            "format": "int64",
+            "description": "Size on disk in bytes when known.",
+            "minimum": 0
+          }
+        }
+      },
+      "LmStudioServerAction": {
+        "type": "string",
+        "enum": ["start", "stop"]
+      },
+      "LmStudioServerRequest": {
+        "type": "object",
+        "required": ["action"],
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/LmStudioServerAction"
+          }
+        }
+      },
+      "LmStudioStatus": {
+        "type": "object",
+        "description": "Aggregated state of the local LM Studio CLI and runtime.",
+        "required": ["cli_available", "server_running", "downloaded", "loaded"],
+        "properties": {
+          "cli_available": {
+            "type": "boolean",
+            "description": "Whether the `lms` executable could be located and invoked."
+          },
+          "cli_path": {
+            "type": ["string", "null"],
+            "description": "Resolved path to the `lms` executable, when found."
+          },
+          "downloaded": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LmStudioModel"
+            },
+            "description": "Models downloaded and available to load."
+          },
+          "loaded": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LmStudioModel"
+            },
+            "description": "Models currently loaded into memory."
+          },
+          "message": {
+            "type": ["string", "null"],
+            "description": "Human-readable note (e.g. install hint) surfaced to admins."
+          },
+          "server_running": {
+            "type": "boolean",
+            "description": "Whether the LM Studio local OpenAI-compatible server is running."
+          },
+          "server_url": {
+            "type": ["string", "null"],
+            "description": "Base URL of the LM Studio local server when running."
+          },
+          "version": {
+            "type": ["string", "null"],
+            "description": "`lms version` output, when available."
+          }
+        }
+      },
+      "LmStudioUnloadRequest": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": ["string", "null"],
+            "description": "Specific model to unload, or `None` to unload everything."
+          }
+        }
+      },
       "LoginRequest": {
         "type": "object",
         "required": ["login", "password"],
@@ -452,6 +554,10 @@
           "data_dir": {
             "type": "string"
           },
+          "lmstudio_cli_path": {
+            "type": ["string", "null"],
+            "description": "Optional override for the LM Studio CLI (`lms`) executable path. When\nunset the server auto-detects `lms` on PATH and in default install\nlocations."
+          },
           "public_url": {
             "type": ["string", "null"]
           },
@@ -619,6 +725,23 @@
           }
         }
       },
+      "UpdateModelRequest": {
+        "type": "object",
+        "properties": {
+          "display_name": {
+            "type": ["string", "null"]
+          },
+          "enabled": {
+            "type": ["boolean", "null"]
+          },
+          "is_default": {
+            "type": ["boolean", "null"]
+          },
+          "upstream_id": {
+            "type": ["string", "null"]
+          }
+        }
+      },
       "UpdatePreferencesRequest": {
         "type": "object",
         "required": ["theme"],
@@ -660,6 +783,10 @@
       "UpdateServerSettingsRequest": {
         "type": "object",
         "properties": {
+          "lmstudio_cli_path": {
+            "type": ["string", "null"],
+            "description": "Set to `Some(\"\")` to clear the override and fall back to auto-detection."
+          },
           "public_url": {
             "type": ["string", "null"]
           },

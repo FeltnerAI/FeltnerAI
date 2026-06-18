@@ -9,7 +9,8 @@ use chrono::Utc;
 use feltnerai_api_types::{
     Branding, ConfigureModelRequest, ConnectionTestResponse, CreateProviderRequest,
     CreateUserRequest, Model, Provider, ServerSettings, Theme, UpdateBrandingRequest,
-    UpdateProviderRequest, UpdateServerSettingsRequest, UpdateUserRequest, User,
+    UpdateModelRequest, UpdateProviderRequest, UpdateServerSettingsRequest, UpdateUserRequest,
+    User,
 };
 use feltnerai_core::{db::new_id, password::hash_password, validation};
 use feltnerai_provider_openai::ProviderConfig;
@@ -395,6 +396,91 @@ pub async fn configure_model(
     Ok(Json(model))
 }
 
+pub async fn update_model(
+    State(state): State<AppState>,
+    Extension(session): Extension<AuthSession>,
+    Path(model_id): Path<Uuid>,
+    Json(request): Json<UpdateModelRequest>,
+) -> AppResult<Json<Model>> {
+    session.require_admin()?;
+    let row = sqlx::query(
+        "SELECT provider_id, upstream_id, display_name, enabled, is_default
+         FROM models WHERE id = ?",
+    )
+    .bind(model_id.to_string())
+    .fetch_optional(&state.pool)
+    .await?
+    .ok_or_else(|| AppError::not_found("Model not found."))?;
+    let provider_id: String = row.try_get("provider_id")?;
+    let current_upstream: String = row.try_get("upstream_id")?;
+    let current_display: String = row.try_get("display_name")?;
+    let current_enabled: bool = row.try_get("enabled")?;
+    let current_default: bool = row.try_get("is_default")?;
+
+    let upstream_id = request
+        .upstream_id
+        .map(|value| value.trim().to_owned())
+        .unwrap_or(current_upstream.clone());
+    let display_name = request
+        .display_name
+        .map(|value| value.trim().to_owned())
+        .unwrap_or(current_display);
+    if upstream_id.is_empty() || display_name.is_empty() {
+        return Err(AppError::bad_request(
+            "Model ID and display name are required.",
+        ));
+    }
+    let enabled = request.enabled.unwrap_or(current_enabled);
+    let is_default = request.is_default.unwrap_or(current_default);
+
+    if upstream_id != current_upstream {
+        let clash: Option<String> = sqlx::query_scalar(
+            "SELECT id FROM models WHERE provider_id = ? AND upstream_id = ? AND id != ?",
+        )
+        .bind(&provider_id)
+        .bind(&upstream_id)
+        .bind(model_id.to_string())
+        .fetch_optional(&state.pool)
+        .await?;
+        if clash.is_some() {
+            return Err(AppError::conflict(
+                "Another model with that upstream ID already exists for this provider.",
+            ));
+        }
+    }
+
+    let now = Utc::now();
+    let mut transaction = state.pool.begin().await?;
+    if is_default {
+        sqlx::query(
+            "UPDATE models SET is_default = 0, updated_at = ? WHERE is_default = 1 AND id != ?",
+        )
+        .bind(now)
+        .bind(model_id.to_string())
+        .execute(&mut *transaction)
+        .await?;
+    }
+    sqlx::query(
+        "UPDATE models SET upstream_id = ?, display_name = ?, enabled = ?, is_default = ?,
+         updated_at = ? WHERE id = ?",
+    )
+    .bind(&upstream_id)
+    .bind(&display_name)
+    .bind(enabled)
+    .bind(is_default)
+    .bind(now)
+    .bind(model_id.to_string())
+    .execute(&mut *transaction)
+    .await?;
+    transaction.commit().await?;
+    let models = fetch_models(&state, false).await?;
+    let model = models
+        .into_iter()
+        .find(|model| model.id == model_id)
+        .ok_or_else(|| AppError::internal("updated model disappeared"))?;
+    Ok(Json(model))
+}
+
 pub async fn delete_model(
     State(state): State<AppState>,
     Extension(session): Extension<AuthSession>,
@@ -416,21 +502,7 @@ pub async fn get_server_settings(
     Extension(session): Extension<AuthSession>,
 ) -> AppResult<Json<ServerSettings>> {
     session.require_admin()?;
-    let row = sqlx::query(
-        "SELECT public_url, trusted_proxies_json FROM server_settings WHERE singleton = 1",
-    )
-    .fetch_one(&state.pool)
-    .await?;
-    let trusted: String = row.try_get("trusted_proxies_json")?;
-    Ok(Json(ServerSettings {
-        public_url: row.try_get("public_url")?,
-        trusted_proxies: serde_json::from_str(&trusted)
-            .map_err(|error| AppError::internal(error.to_string()))?,
-        data_dir: state.config.data_dir.display().to_string(),
-        startup_supported: platform::startup_supported(),
-        start_at_login: platform::start_at_login()
-            .map_err(|error| AppError::internal(error.to_string()))?,
-    }))
+    get_server_settings_inner(&state).await.map(Json)
 }
 
 pub async fn update_server_settings(
@@ -453,12 +525,19 @@ pub async fn update_server_settings(
             AppError::bad_request(format!("Invalid trusted proxy address: {address}"))
         })?;
     }
+    let lmstudio_cli_path = match request.lmstudio_cli_path {
+        // An empty string clears the override and restores auto-detection.
+        Some(value) if value.trim().is_empty() => None,
+        Some(value) => Some(value.trim().to_owned()),
+        None => current.lmstudio_cli_path,
+    };
     sqlx::query(
-        "UPDATE server_settings SET public_url = ?, trusted_proxies_json = ?, updated_at = ?
-         WHERE singleton = 1",
+        "UPDATE server_settings SET public_url = ?, trusted_proxies_json = ?,
+         lmstudio_cli_path = ?, updated_at = ? WHERE singleton = 1",
     )
     .bind(&public_url)
     .bind(serde_json::to_string(&trusted).map_err(|error| AppError::internal(error.to_string()))?)
+    .bind(&lmstudio_cli_path)
     .bind(Utc::now())
     .execute(&state.pool)
     .await?;
@@ -466,14 +545,7 @@ pub async fn update_server_settings(
         platform::set_start_at_login(enabled)
             .map_err(|error| AppError::internal(error.to_string()))?;
     }
-    Ok(Json(ServerSettings {
-        public_url,
-        trusted_proxies: trusted,
-        data_dir: state.config.data_dir.display().to_string(),
-        startup_supported: platform::startup_supported(),
-        start_at_login: platform::start_at_login()
-            .map_err(|error| AppError::internal(error.to_string()))?,
-    }))
+    get_server_settings_inner(&state).await.map(Json)
 }
 
 pub async fn update_branding(
@@ -694,7 +766,8 @@ fn encrypt_headers(state: &AppState, headers: &BTreeMap<String, String>) -> AppR
 
 async fn get_server_settings_inner(state: &AppState) -> AppResult<ServerSettings> {
     let row = sqlx::query(
-        "SELECT public_url, trusted_proxies_json FROM server_settings WHERE singleton = 1",
+        "SELECT public_url, trusted_proxies_json, lmstudio_cli_path
+         FROM server_settings WHERE singleton = 1",
     )
     .fetch_one(&state.pool)
     .await?;
@@ -707,6 +780,7 @@ async fn get_server_settings_inner(state: &AppState) -> AppResult<ServerSettings
         startup_supported: platform::startup_supported(),
         start_at_login: platform::start_at_login()
             .map_err(|error| AppError::internal(error.to_string()))?,
+        lmstudio_cli_path: row.try_get("lmstudio_cli_path")?,
     })
 }
 

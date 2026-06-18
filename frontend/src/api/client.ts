@@ -1,4 +1,9 @@
 import type {
+  Message as AgentMessage,
+  ToolCall as AgentToolCall,
+  ToolDef as AgentToolDef,
+} from "../agent/types";
+import type {
   ApiError,
   Chat,
   GenerateRequest,
@@ -150,6 +155,123 @@ export async function streamGeneration(
       if (data) onEvent(JSON.parse(data) as StreamEvent);
     }
   }
+}
+
+/**
+ * Stream a single agent turn through `POST /api/v1/agent/completions`, forward
+ * text deltas to `onText`, and return the assembled assistant message
+ * (content + any tool calls). Tool-call deltas are accumulated by `index`, the
+ * same way the upstream OpenAI stream emits them.
+ */
+export async function streamAgentCompletion(
+  modelId: string,
+  messages: AgentMessage[],
+  tools: AgentToolDef[],
+  temperature: number,
+  onText: (text: string) => void,
+  signal?: AbortSignal,
+): Promise<AgentMessage> {
+  const headers = new Headers({ "content-type": "application/json" });
+  if (runtime.bearerToken)
+    headers.set("authorization", `Bearer ${runtime.bearerToken}`);
+  if (runtime.csrfToken) headers.set("x-csrf-token", runtime.csrfToken);
+  const body: Record<string, unknown> = {
+    model_id: modelId,
+    messages,
+    temperature,
+  };
+  if (tools.length) body.tools = tools;
+
+  const response = await fetch(`${runtime.baseUrl}/api/v1/agent/completions`, {
+    method: "POST",
+    headers,
+    credentials: runtime.baseUrl ? "omit" : "include",
+    body: JSON.stringify(body),
+    signal,
+  });
+  if (!response.ok || !response.body) {
+    const error = await response.json().catch(() => null);
+    throw new ApiRequestError(
+      error?.message ?? `Model request failed (${response.status}).`,
+      response.status,
+      error?.code,
+    );
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let content = "";
+  const calls: { id: string; name: string; args: string }[] = [];
+
+  let done = false;
+  while (!done) {
+    const read = await reader.read();
+    if (read.done) break;
+    buffer += decoder.decode(read.value, { stream: true });
+    let newline: number;
+    while ((newline = buffer.indexOf("\n")) >= 0) {
+      const line = buffer.slice(0, newline).replace(/\r$/, "");
+      buffer = buffer.slice(newline + 1);
+      if (!line.startsWith("data:")) continue;
+      const data = line.slice(5).trim();
+      if (data === "[DONE]") {
+        done = true;
+        break;
+      }
+      if (!data) continue;
+      let chunk: AgentChatChunk;
+      try {
+        chunk = JSON.parse(data) as AgentChatChunk;
+      } catch {
+        continue;
+      }
+      const delta = chunk.choices?.[0]?.delta;
+      if (!delta) continue;
+      if (typeof delta.content === "string" && delta.content) {
+        content += delta.content;
+        onText(delta.content);
+      }
+      for (const tc of delta.tool_calls ?? []) {
+        const index = tc.index ?? 0;
+        while (calls.length <= index)
+          calls.push({ id: "", name: "", args: "" });
+        const slot = calls[index]!;
+        if (tc.id) slot.id = tc.id;
+        if (tc.function?.name) slot.name += tc.function.name;
+        if (tc.function?.arguments) slot.args += tc.function.arguments;
+      }
+    }
+  }
+
+  const toolCalls: AgentToolCall[] = calls
+    .filter((call) => call.name)
+    .map((call) => ({
+      id:
+        call.id ||
+        `call_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      type: "function",
+      function: { name: call.name, arguments: call.args.trim() || "{}" },
+    }));
+
+  return {
+    role: "assistant",
+    content: content || undefined,
+    tool_calls: toolCalls.length ? toolCalls : undefined,
+  };
+}
+
+interface AgentChatChunk {
+  choices?: {
+    delta?: {
+      content?: string | null;
+      tool_calls?: {
+        index?: number;
+        id?: string;
+        function?: { name?: string; arguments?: string };
+      }[];
+    };
+  }[];
 }
 
 export const chatApi = {

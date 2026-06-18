@@ -147,6 +147,13 @@ export type ConfigureModelRequest = {
   is_default: boolean;
 };
 
+export type UpdateModelRequest = {
+  upstream_id: string | null;
+  display_name: string | null;
+  enabled: boolean | null;
+  is_default: boolean | null;
+};
+
 export type Chat = {
   id: string;
   title: string;
@@ -195,12 +202,22 @@ export type ServerSettings = {
   data_dir: string;
   startup_supported: boolean;
   start_at_login: boolean;
+  /**
+   * Optional override for the LM Studio CLI (`lms`) executable path. When
+   * unset the server auto-detects `lms` on PATH and in default install
+   * locations.
+   */
+  lmstudio_cli_path: string | null;
 };
 
 export type UpdateServerSettingsRequest = {
   public_url: string | null;
   trusted_proxies: Array<string> | null;
   start_at_login: boolean | null;
+  /**
+   * Set to `Some("")` to clear the override and fall back to auto-detection.
+   */
+  lmstudio_cli_path: string | null;
 };
 
 export type UpdateBrandingRequest = {
@@ -212,3 +229,69 @@ export type UpdateBrandingRequest = {
 export type ImportDataResponse = { restart_required: boolean; message: string };
 
 export type ApiError = { code: string; message: string };
+
+export type LmStudioModel = {
+  /**
+   * Identifier passed to `lms load`/`lms unload` (the model key/path).
+   */
+  id: string;
+  /**
+   * Friendly display name when LM Studio reports one.
+   */
+  display_name: string | null;
+  /**
+   * Size on disk in bytes when known.
+   */
+  size_bytes: number | null;
+};
+
+export type LmStudioStatus = {
+  /**
+   * Whether the `lms` executable could be located and invoked.
+   */
+  cli_available: boolean;
+  /**
+   * Resolved path to the `lms` executable, when found.
+   */
+  cli_path: string | null;
+  /**
+   * `lms version` output, when available.
+   */
+  version: string | null;
+  /**
+   * Whether the LM Studio local OpenAI-compatible server is running.
+   */
+  server_running: boolean;
+  /**
+   * Base URL of the LM Studio local server when running.
+   */
+  server_url: string | null;
+  /**
+   * Models downloaded and available to load.
+   */
+  downloaded: Array<LmStudioModel>;
+  /**
+   * Models currently loaded into memory.
+   */
+  loaded: Array<LmStudioModel>;
+  /**
+   * Human-readable note (e.g. install hint) surfaced to admins.
+   */
+  message: string | null;
+};
+
+export type LmStudioServerAction = "start" | "stop";
+
+export type LmStudioServerRequest = { action: LmStudioServerAction };
+
+export type LmStudioLoadRequest = {
+  model: string;
+  context_length: number | null;
+};
+
+export type LmStudioUnloadRequest = {
+  /**
+   * Specific model to unload, or `None` to unload everything.
+   */
+  model: string | null;
+};

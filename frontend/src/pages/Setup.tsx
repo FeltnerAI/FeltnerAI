@@ -53,11 +53,13 @@ export function SetupPage() {
     setForm((current) => ({ ...current, [key]: value }));
   return (
     <main className="mx-auto min-h-screen max-w-4xl p-5 py-12">
-      <form className="panel rounded-3xl p-6 sm:p-9" onSubmit={submit}>
+      <form className="panel-strong rounded-3xl p-6 sm:p-9" onSubmit={submit}>
         <p className="text-sm font-bold tracking-[0.18em] text-[var(--accent)] uppercase">
           First-run setup
         </p>
-        <h1 className="mt-2 text-4xl font-bold">Make this server yours.</h1>
+        <h1 className="text-gradient mt-2 text-4xl font-bold tracking-tight">
+          Make this server yours.
+        </h1>
         <p className="mt-3 max-w-2xl text-[var(--muted)]">
           Enter the temporary setup token printed by the server. It changes
           after every restart and is disabled permanently when setup completes.

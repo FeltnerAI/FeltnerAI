@@ -10,20 +10,24 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "playwright:install": "playwright install chromium",
     "format": "prettier --write .",
     "format:api": "prettier --write src/api/generated.ts src/api/openapi.json",
-    "tauri": "cd ../crates/feltnerai-portal && cargo tauri"
+    "tauri": "cd ../crates/feltnerai-portal && tauri"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-slot": "^1.2.3",
-    "@tauri-apps/api": "^2.8.0",
     "@tanstack/react-query": "^5.90.0",
+    "@tauri-apps/api": "^2.8.0",
+    "@tauri-apps/cli": "^2.8.0",
     "lucide-react": "^0.468.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-router-dom": "^7.9.0"
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.9.0",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",
