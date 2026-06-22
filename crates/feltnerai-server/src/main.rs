@@ -10,22 +10,77 @@ use tokio::{
     net::TcpListener,
     sync::{Mutex, mpsc},
 };
-use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
+use tracing_appender::non_blocking::WorkerGuard;
+use tracing_subscriber::{
+    EnvFilter, Layer, Registry, layer::SubscriberExt, util::SubscriberInitExt,
+};
+
+/// Initialise logging: always to the console, and additionally to a daily-rolled
+/// file under `<data_dir>/logs` so failures (e.g. a provider that won't connect)
+/// can be inspected after the fact. File logging is best-effort — if the
+/// directory can't be created the server still starts with console logging.
+///
+/// The returned [`WorkerGuard`] must be held for the lifetime of the process;
+/// dropping it flushes and stops the background file writer.
+fn init_logging(config: &Config) -> Result<Option<WorkerGuard>> {
+    let mut layers: Vec<Box<dyn Layer<Registry> + Send + Sync>> = Vec::new();
+
+    let console = if config.log_json {
+        tracing_subscriber::fmt::layer()
+            .json()
+            .with_filter(EnvFilter::try_new(&config.log_filter)?)
+            .boxed()
+    } else {
+        tracing_subscriber::fmt::layer()
+            .with_filter(EnvFilter::try_new(&config.log_filter)?)
+            .boxed()
+    };
+    layers.push(console);
+
+    let log_dir = config.data_dir.join("logs");
+    let guard = match std::fs::create_dir_all(&log_dir) {
+        Ok(()) => {
+            let appender = tracing_appender::rolling::daily(&log_dir, "feltnerai.log");
+            let (writer, guard) = tracing_appender::non_blocking(appender);
+            let file = if config.log_json {
+                tracing_subscriber::fmt::layer()
+                    .json()
+                    .with_ansi(false)
+                    .with_writer(writer)
+                    .with_filter(EnvFilter::try_new(&config.log_filter)?)
+                    .boxed()
+            } else {
+                tracing_subscriber::fmt::layer()
+                    .with_ansi(false)
+                    .with_writer(writer)
+                    .with_filter(EnvFilter::try_new(&config.log_filter)?)
+                    .boxed()
+            };
+            layers.push(file);
+            Some(guard)
+        }
+        Err(error) => {
+            eprintln!(
+                "warning: file logging disabled; could not create {}: {error}",
+                log_dir.display()
+            );
+            None
+        }
+    };
+
+    tracing_subscriber::registry().with(layers).init();
+    Ok(guard)
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let config = Config::from_env()?;
-    let filter = EnvFilter::try_new(&config.log_filter)?;
-    if config.log_json {
-        tracing_subscriber::registry()
-            .with(filter)
-            .with(tracing_subscriber::fmt::layer().json())
-            .init();
-    } else {
-        tracing_subscriber::registry()
-            .with(filter)
-            .with(tracing_subscriber::fmt::layer())
-            .init();
+    let _log_guard = init_logging(&config)?;
+    if _log_guard.is_some() {
+        tracing::info!(
+            log_dir = %config.data_dir.join("logs").display(),
+            "file logging enabled"
+        );
     }
 
     let (control_tx, control_rx) = mpsc::unbounded_channel();

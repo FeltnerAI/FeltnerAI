@@ -5,6 +5,7 @@ import {
   ThreadPrimitive,
 } from "@assistant-ui/react";
 import { ArrowDown, Check, Copy, RefreshCw, Send, Square } from "lucide-react";
+import { useMemo } from "react";
 import type { ComponentProps, ReactNode } from "react";
 
 import { MarkdownText } from "@/components/assistant-ui/markdown-text";
@@ -30,6 +31,20 @@ export function Thread({
   /** Rendered pinned above the message list (e.g. the agent plan panel). */
   headerSlot?: ReactNode;
 }) {
+  // Build the message components map once per `parts` value. Recreating it on
+  // every render gives `ThreadPrimitive.Messages` a new AssistantMessage type
+  // each token, which remounts the whole bubble (replaying the entrance
+  // animation and re-rendering markdown) and makes streaming flicker badly.
+  const messageComponents = useMemo(
+    () => ({
+      UserMessage,
+      AssistantMessage: (props: ComponentProps<typeof AssistantMessage>) => (
+        <AssistantMessage {...props} parts={parts} />
+      ),
+    }),
+    [parts],
+  );
+
   return (
     <ThreadPrimitive.Root className="flex h-full min-h-0 flex-col">
       <ThreadPrimitive.Viewport className="relative flex min-h-0 flex-1 flex-col overflow-y-auto">
@@ -50,14 +65,7 @@ export function Thread({
             )}
           </ThreadPrimitive.Empty>
 
-          <ThreadPrimitive.Messages
-            components={{
-              UserMessage,
-              AssistantMessage: (props) => (
-                <AssistantMessage {...props} parts={parts} />
-              ),
-            }}
-          />
+          <ThreadPrimitive.Messages components={messageComponents} />
         </div>
       </ThreadPrimitive.Viewport>
 

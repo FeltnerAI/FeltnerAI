@@ -29,9 +29,16 @@ function wideViewport() {
 }
 
 function toThreadMessage(message: Message): ThreadMessageLike {
+  if (message.role === "user") {
+    return {
+      id: message.id,
+      role: "user",
+      content: [{ type: "text", text: message.content }],
+    };
+  }
   return {
     id: message.id,
-    role: message.role === "user" ? "user" : "assistant",
+    role: "assistant",
     content: [{ type: "text", text: message.content }],
     status:
       message.status === "streaming"
@@ -153,11 +160,13 @@ export function ChatPage() {
       setError(caught);
     } finally {
       setStreaming(false);
-      setStreamedMessage(null);
+      // Refetch first so the persisted message is in place, then drop the
+      // streamed copy — avoids a one-frame gap where the bubble disappears.
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["messages", chatId] }),
         queryClient.invalidateQueries({ queryKey: ["chats"] }),
       ]);
+      setStreamedMessage(null);
     }
   }
 
@@ -182,15 +191,21 @@ export function ChatPage() {
       setError(caught);
     } finally {
       setStreaming(false);
-      setStreamedMessage(null);
       await queryClient.invalidateQueries({ queryKey: ["messages", chatId] });
+      setStreamedMessage(null);
     }
   }
 
-  const renderedMessages = [
-    ...(messages.data ?? []),
-    ...(streamedMessage ? [streamedMessage] : []),
-  ];
+  // Append the in-flight streamed message only while the persisted list does not
+  // already contain it. Once the post-stream refetch lands, the real message
+  // (same id) takes over seamlessly, so clearing `streamedMessage` afterwards
+  // can't cause the bubble to blink out and re-animate.
+  const baseMessages = messages.data ?? [];
+  const renderedMessages =
+    streamedMessage &&
+    !baseMessages.some((message) => message.id === streamedMessage.id)
+      ? [...baseMessages, streamedMessage]
+      : baseMessages;
 
   const runtime = useExternalStoreRuntime<Message>({
     messages: renderedMessages,

@@ -51,7 +51,15 @@ build:
     cargo build --release -p feltnerai-server
     cargo build --release -p feltnerai-tray
 
+# Setting CI keeps Tauri's macOS DMG bundler from running the AppleScript that
+# opens the mounted disk image in Finder mid-build; the .dmg is still produced.
 [group('build')]
+[unix]
+portal:
+    CI=true bun run --cwd frontend tauri build
+
+[group('build')]
+[windows]
 portal:
     bun run --cwd frontend tauri build
 

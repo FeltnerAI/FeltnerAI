@@ -29,10 +29,53 @@ pub enum ProviderError {
     Http(StatusCode),
     #[error("provider returned an invalid response")]
     InvalidResponse,
-    #[error("provider connection failed")]
-    Connection,
+    #[error("provider connection failed: {0}")]
+    Connection(String),
     #[error("generation canceled")]
     Canceled,
+}
+
+/// Turn a low-level reqwest failure into a `Connection` error, logging the full
+/// cause first. The opaque "provider connection failed" message that reaches the
+/// UI is useless on its own, so the real reason (refused, DNS, timeout, TLS,
+/// proxy, …) is recorded here and carried along for display.
+fn connection_error(base_url: &str, route: &str, error: reqwest::Error) -> ProviderError {
+    let detail = describe_reqwest(&error);
+    tracing::warn!(
+        base_url = %base_url,
+        route = %route,
+        error = %error,
+        "provider request could not reach the upstream"
+    );
+    ProviderError::Connection(detail)
+}
+
+/// Build a concise, human-readable explanation of a reqwest error, classifying
+/// the most common local-provider failures so the cause is obvious at a glance.
+fn describe_reqwest(error: &reqwest::Error) -> String {
+    let kind = if error.is_connect() {
+        "could not establish a connection (is the provider running and reachable?)"
+    } else if error.is_timeout() {
+        "the request timed out"
+    } else if error.is_request() {
+        "the request could not be sent"
+    } else if error.is_body() || error.is_decode() {
+        "the response could not be read"
+    } else {
+        "the request failed"
+    };
+    // Walk the source chain so the root cause (e.g. "connection refused") is
+    // surfaced rather than reqwest's generic wrapper text.
+    let mut cause: Option<String> = None;
+    let mut source = std::error::Error::source(error);
+    while let Some(inner) = source {
+        cause = Some(inner.to_string());
+        source = inner.source();
+    }
+    match cause {
+        Some(detail) => format!("{kind}: {detail}"),
+        None => kind.to_owned(),
+    }
 }
 
 #[derive(Clone)]
@@ -82,7 +125,7 @@ impl OpenAiProvider {
             .headers(Self::headers(config)?)
             .send()
             .await
-            .map_err(|_| ProviderError::Connection)?;
+            .map_err(|error| connection_error(&config.base_url, "models", error))?;
         if !response.status().is_success() {
             return Err(ProviderError::Http(response.status()));
         }
@@ -114,7 +157,7 @@ impl OpenAiProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|_| ProviderError::Connection)?;
+            .map_err(|error| connection_error(&config.base_url, "chat/completions", error))?;
         if !response.status().is_success() {
             return Err(ProviderError::Http(response.status()));
         }
@@ -140,7 +183,7 @@ impl OpenAiProvider {
             }))
             .send()
             .await
-            .map_err(|_| ProviderError::Connection)?;
+            .map_err(|error| connection_error(&config.base_url, "chat/completions", error))?;
         if !response.status().is_success() {
             return Err(ProviderError::Http(response.status()));
         }
@@ -154,7 +197,10 @@ impl OpenAiProvider {
                     chunk = bytes.next() => Ok(chunk),
                 }?;
                 let Some(chunk) = chunk else { break };
-                let chunk = chunk.map_err(|_| ProviderError::Connection)?;
+                let chunk = chunk.map_err(|error| {
+                    tracing::warn!(error = %error, "provider stream interrupted");
+                    ProviderError::Connection(describe_reqwest(&error))
+                })?;
                 buffer.push_str(&String::from_utf8_lossy(&chunk));
                 while let Some(position) = buffer.find('\n') {
                     let line = buffer[..position].trim_end_matches('\r').to_owned();
