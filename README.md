@@ -44,7 +44,6 @@ just setup        Install project deps and verify system prerequisites
 just generate-api  Generate tracked TypeScript API definitions
 just format        Format Rust and frontend sources
 just check         Run formatting, Clippy, Rust tests, frontend checks/tests/build
-just e2e           Run Playwright browser flows
 just build         Build the frontend and release server
 just portal        Build Tauri installers for the current platform
 ```

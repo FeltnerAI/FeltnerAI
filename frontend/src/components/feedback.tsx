@@ -1,29 +1,38 @@
 /* eslint-disable react-refresh/only-export-components */
 import {
-  AlertTriangle,
-  CheckCircle2,
-  Info,
-  X,
-  XCircle,
-} from "lucide-react";
-import {
   createContext,
   useCallback,
   useContext,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from "react";
-import { Button, Modal } from "./ui";
+import { toast as sonnerToast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Toaster } from "@/components/ui/sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type ToastTone = "info" | "success" | "error";
-
-interface ToastItem {
-  id: number;
-  message: string;
-  tone: ToastTone;
-}
 
 interface ConfirmOptions {
   title: string;
@@ -59,23 +68,14 @@ type DialogState =
   | null;
 
 export function FeedbackProvider({ children }: { children: ReactNode }) {
-  const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [dialog, setDialog] = useState<DialogState>(null);
   const [promptValue, setPromptValue] = useState("");
-  const counter = useRef(0);
 
-  const dismiss = useCallback((id: number) => {
-    setToasts((current) => current.filter((toast) => toast.id !== id));
+  const toast = useCallback((message: string, tone: ToastTone = "info") => {
+    if (tone === "success") sonnerToast.success(message);
+    else if (tone === "error") sonnerToast.error(message);
+    else sonnerToast(message);
   }, []);
-
-  const toast = useCallback(
-    (message: string, tone: ToastTone = "info") => {
-      const id = ++counter.current;
-      setToasts((current) => [...current, { id, message, tone }]);
-      window.setTimeout(() => dismiss(id), 4200);
-    },
-    [dismiss],
-  );
 
   const confirm = useCallback(
     (options: ConfirmOptions) =>
@@ -94,11 +94,17 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  const closeDialog = useCallback(
-    (result: boolean | string | null) => {
-      if (!dialog) return;
-      if (dialog.kind === "confirm") dialog.resolve(result as boolean);
-      else dialog.resolve(result as string | null);
+  const closeConfirm = useCallback(
+    (ok: boolean) => {
+      if (dialog?.kind === "confirm") dialog.resolve(ok);
+      setDialog(null);
+    },
+    [dialog],
+  );
+
+  const closePrompt = useCallback(
+    (result: string | null) => {
+      if (dialog?.kind === "prompt") dialog.resolve(result);
       setDialog(null);
     },
     [dialog],
@@ -109,110 +115,93 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
     [toast, confirm, prompt],
   );
 
-  const toneIcon = {
-    info: <Info size={18} className="text-[var(--accent)]" />,
-    success: <CheckCircle2 size={18} className="text-emerald-500" />,
-    error: <XCircle size={18} className="text-[var(--danger)]" />,
-  };
-
   return (
     <FeedbackContext.Provider value={value}>
       {children}
+      <Toaster />
 
-      {/* Toast stack */}
-      <div className="pointer-events-none fixed right-4 bottom-4 z-[60] flex w-[min(92vw,22rem)] flex-col gap-2">
-        {toasts.map((item) => (
-          <div
-            key={item.id}
-            role="status"
-            className="panel-strong toast-in pointer-events-auto flex items-start gap-3 rounded-xl p-3.5 text-sm"
-          >
-            <span className="mt-0.5 shrink-0">{toneIcon[item.tone]}</span>
-            <span className="min-w-0 flex-1">{item.message}</span>
-            <button
-              className="shrink-0 opacity-60 transition hover:opacity-100"
-              onClick={() => dismiss(item.id)}
-              aria-label="Dismiss"
-            >
-              <X size={15} />
-            </button>
-          </div>
-        ))}
-      </div>
-
-      {/* Confirm dialog */}
-      <Modal
+      <AlertDialog
         open={dialog?.kind === "confirm"}
-        onOpenChange={(open) => !open && closeDialog(false)}
-        title={dialog?.kind === "confirm" ? dialog.options.title : ""}
+        onOpenChange={(open) => !open && closeConfirm(false)}
       >
-        {dialog?.kind === "confirm" && (
-          <div className="grid gap-5">
-            {dialog.options.danger && (
-              <div className="flex items-center gap-2 text-[var(--danger)]">
-                <AlertTriangle size={18} />
-                <span className="text-sm font-semibold">
-                  This action cannot be undone.
-                </span>
-              </div>
-            )}
-            {dialog.options.message && (
-              <p className="text-[var(--muted)]">{dialog.options.message}</p>
-            )}
-            <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => closeDialog(false)}>
-                {dialog.options.cancelText ?? "Cancel"}
-              </Button>
-              <Button
-                variant={dialog.options.danger ? "danger" : "primary"}
-                onClick={() => closeDialog(true)}
-              >
-                {dialog.options.confirmText ?? "Confirm"}
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
+        <AlertDialogContent>
+          {dialog?.kind === "confirm" && (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{dialog.options.title}</AlertDialogTitle>
+                <AlertDialogDescription
+                  className={dialog.options.message ? "" : "sr-only"}
+                >
+                  {dialog.options.message ??
+                    (dialog.options.danger
+                      ? "This action cannot be undone."
+                      : "Please confirm.")}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => closeConfirm(false)}>
+                  {dialog.options.cancelText ?? "Cancel"}
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  className={
+                    dialog.options.danger
+                      ? "bg-destructive text-[var(--danger-contrast)] hover:brightness-110"
+                      : undefined
+                  }
+                  onClick={() => closeConfirm(true)}
+                >
+                  {dialog.options.confirmText ?? "Confirm"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </>
+          )}
+        </AlertDialogContent>
+      </AlertDialog>
 
-      {/* Prompt dialog */}
-      <Modal
+      <Dialog
         open={dialog?.kind === "prompt"}
-        onOpenChange={(open) => !open && closeDialog(null)}
-        title={dialog?.kind === "prompt" ? dialog.options.title : ""}
+        onOpenChange={(open) => !open && closePrompt(null)}
       >
-        {dialog?.kind === "prompt" && (
-          <form
-            className="grid gap-5"
-            onSubmit={(event) => {
-              event.preventDefault();
-              closeDialog(promptValue.trim() || null);
-            }}
-          >
-            <label className="grid gap-1.5 text-sm font-semibold">
-              <span>{dialog.options.label}</span>
-              <input
-                autoFocus
-                className="field font-normal"
-                value={promptValue}
-                placeholder={dialog.options.placeholder}
-                onChange={(event) => setPromptValue(event.target.value)}
-              />
-            </label>
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => closeDialog(null)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit">
-                {dialog.options.confirmText ?? "Save"}
-              </Button>
-            </div>
-          </form>
-        )}
-      </Modal>
+        <DialogContent>
+          {dialog?.kind === "prompt" && (
+            <form
+              className="grid gap-5"
+              onSubmit={(event) => {
+                event.preventDefault();
+                closePrompt(promptValue.trim() || null);
+              }}
+            >
+              <DialogHeader>
+                <DialogTitle>{dialog.options.title}</DialogTitle>
+                <DialogDescription className="sr-only">
+                  {dialog.options.title}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-1.5">
+                <Label>{dialog.options.label}</Label>
+                <Input
+                  autoFocus
+                  value={promptValue}
+                  placeholder={dialog.options.placeholder}
+                  onChange={(event) => setPromptValue(event.target.value)}
+                />
+              </div>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => closePrompt(null)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit">
+                  {dialog.options.confirmText ?? "Save"}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </FeedbackContext.Provider>
   );
 }

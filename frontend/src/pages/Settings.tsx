@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { api } from "../api/client";
-import { Button, ErrorNotice, Input, Select } from "../components/ui";
+import { Button, ErrorNotice, Input, Select } from "../components/common";
 import { applyTheme, useAuth } from "../contexts";
 
 export function SettingsPage() {

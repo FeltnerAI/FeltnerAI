@@ -4,7 +4,7 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { api } from "../../api/client";
 import type { Role, User } from "../../api/generated";
 import { useFeedback } from "../../components/feedback";
-import { Button, ErrorNotice, Input, Modal, Select } from "../../components/ui";
+import { Button, ErrorNotice, Input, Modal, Select } from "../../components/common";
 
 export function AdminUsersPage() {
   const queryClient = useQueryClient();

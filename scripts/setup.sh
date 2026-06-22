@@ -200,8 +200,7 @@ esac
 printf '\nInstalling project dependencies...\n'
 if command -v bun >/dev/null 2>&1; then
   bun install --cwd frontend
-  bun run --cwd frontend playwright:install
-  ok "frontend npm packages and Playwright Chromium"
+  ok "frontend packages installed"
 else
   warn "Skipped frontend install because bun is missing"
 fi

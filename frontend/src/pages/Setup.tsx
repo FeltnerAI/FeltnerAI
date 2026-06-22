@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { api } from "../api/client";
-import { Button, ErrorNotice, Input } from "../components/ui";
+import { Button, ErrorNotice, Input } from "../components/common";
 
 export function SetupPage() {
   const [form, setForm] = useState({

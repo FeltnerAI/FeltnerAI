@@ -1,4 +1,44 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+/* Drive Tailwind's `dark:` variant from the `.dark` class we toggle on <html>
+   (see contexts.tsx `applyTheme`), so shadcn/ui components and `dark:` utilities
+   follow the user's explicit theme choice, not only the OS preference. */
+@custom-variant dark (&:is(.dark *));
+
+/* Bridge the Aurora design tokens onto shadcn/ui token names so shadcn
+   components — and utilities like `bg-background`, `text-muted-foreground`,
+   `border-border` — inherit the brand. `--primary` is wired to the runtime brand
+   accent, so admin branding flows through every shadcn component automatically.
+   We map to dedicated intermediary vars to avoid clobbering the Aurora `--accent`
+   (brand color) and `--muted` (muted *text*) tokens, which mean different things
+   than their shadcn namesakes. */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted-surface);
+  --color-muted-foreground: var(--muted);
+  --color-accent: var(--accent-surface);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--danger);
+  --color-destructive-foreground: var(--danger-contrast);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
 
 /*
  * FeltnerAI — "Aurora glass" identity.
@@ -37,8 +77,26 @@
   --border-strong: rgba(20, 20, 50, 0.16);
   --ring: color-mix(in srgb, var(--accent) 34%, transparent);
   --danger: #d23a52;
+  --danger-contrast: #ffffff;
   --shadow: 0 24px 60px -28px rgba(24, 22, 60, 0.4);
   --highlight: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+
+  /* shadcn/ui tokens (light), derived from the Aurora tokens above. */
+  --radius: 0.75rem;
+  --background: #eef0f8;
+  --foreground: #1b1b27;
+  --card: var(--panel-solid);
+  --card-foreground: var(--foreground);
+  --popover: var(--panel-solid);
+  --popover-foreground: var(--foreground);
+  --primary: var(--accent);
+  --primary-foreground: var(--accent-contrast);
+  --secondary: color-mix(in srgb, var(--muted) 12%, transparent);
+  --secondary-foreground: var(--foreground);
+  --muted-surface: color-mix(in srgb, var(--muted) 12%, transparent);
+  --accent-surface: var(--accent-soft);
+  --accent-foreground: var(--accent);
+  --input: var(--border-strong);
 
   color-scheme: light;
 }
@@ -55,8 +113,14 @@
   --border: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.14);
   --danger: #ff6b81;
+  --danger-contrast: #1b0a0e;
   --shadow: 0 32px 80px -32px rgba(0, 0, 0, 0.8);
   --highlight: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  /* shadcn/ui token overrides (dark). The rest reference Aurora vars that
+     already shift above, so only the absolute surfaces need restating. */
+  --background: #07070d;
+  --foreground: #f3f3fb;
 
   color-scheme: dark;
 }

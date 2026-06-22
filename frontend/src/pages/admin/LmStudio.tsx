@@ -26,7 +26,7 @@ import {
   Input,
   Modal,
   Spinner,
-} from "../../components/ui";
+} from "../../components/common";
 import { AdminPage } from "./Users";
 
 const STATUS_KEY = ["admin", "lmstudio"];

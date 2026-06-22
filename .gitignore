@@ -1,8 +1,6 @@
 /target
 /frontend/node_modules
 /frontend/dist
-/frontend/playwright-report
-/frontend/test-results
 /crates/feltnerai-api-types/bindings
 /.env
 /data

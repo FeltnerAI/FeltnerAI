@@ -11,7 +11,7 @@ import {
   Input,
   Modal,
   Select,
-} from "../../components/ui";
+} from "../../components/common";
 import { AdminPage } from "./Users";
 
 export function AdminModelsPage() {

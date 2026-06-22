@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { api } from "../../api/client";
 import type { Branding } from "../../api/generated";
-import { Button, ErrorNotice, Input } from "../../components/ui";
+import { Button, ErrorNotice, Input } from "../../components/common";
 import { useRuntime } from "../../contexts";
 import { AdminPage } from "./Users";
 

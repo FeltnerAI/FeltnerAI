@@ -1,27 +1,26 @@
+import {
+  AssistantRuntimeProvider,
+  useExternalStoreRuntime,
+  type ThreadMessageLike,
+} from "@assistant-ui/react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  ChevronDown,
-  ChevronRight,
   FolderOpen,
   FolderPlus,
   ListChecks,
-  Send,
-  Square,
-  Terminal,
   Trash2,
 } from "lucide-react";
 import {
-  lazy,
-  Suspense,
   useCallback,
   useEffect,
   useRef,
   useState,
-  type FormEvent,
+  type ComponentProps,
 } from "react";
-import { api } from "../api/client";
-import type { Model } from "../api/generated";
-import { Agent } from "../agent/engine";
+
+import { api } from "@/api/client";
+import type { Model } from "@/api/generated";
+import { Agent } from "@/agent/engine";
 import type {
   AgentEvent,
   ApprovalRequest,
@@ -29,20 +28,15 @@ import type {
   Mode,
   PlanStep,
   Question,
-} from "../agent/types";
-import {
-  Badge,
-  Button,
-  EmptyState,
-  ErrorNotice,
-  Modal,
-  Select,
-  Spinner,
-} from "../components/ui";
-import { useFeedback } from "../components/feedback";
-import { isPortal, portal, type CodeProject } from "../portal";
-
-const Markdown = lazy(() => import("../components/Markdown"));
+} from "@/agent/types";
+import { MarkdownText } from "@/components/assistant-ui/markdown-text";
+import { Thread } from "@/components/assistant-ui/thread";
+import { ToolFallback } from "@/components/assistant-ui/tool-fallback";
+import { Button, EmptyState, ErrorNotice, Modal, Select } from "@/components/common";
+import { useFeedback } from "@/components/feedback";
+import { Textarea } from "@/components/ui/textarea";
+import { isPortal, portal, type CodeProject } from "@/portal";
+import { cn } from "@/lib/utils";
 
 const TEMPERATURE = 0.2;
 
@@ -52,27 +46,17 @@ const MODE_LABELS: Record<Mode, string> = {
   auto: "Auto",
 };
 
-type TranscriptItem =
-  | { kind: "user"; id: number; text: string }
-  | { kind: "assistant"; id: number; text: string }
-  | {
-      kind: "tool";
-      id: number;
-      callId: string;
-      name: string;
-      summary: string;
-      status: "running" | "ok" | "error";
-      output: string;
-    }
-  | { kind: "notice"; id: number; text: string }
-  | { kind: "error"; id: number; text: string };
-
 interface PendingApproval extends ApprovalRequest {
   resolve: (approved: boolean) => void;
 }
 interface PendingQuestion extends Question {
   resolve: (answer: string) => void;
 }
+
+const AGENT_PARTS: ComponentProps<typeof Thread>["parts"] = {
+  Text: MarkdownText,
+  tools: { Fallback: ToolFallback },
+};
 
 function basename(path: string): string {
   const parts = path.split(/[\\/]/).filter(Boolean);
@@ -106,13 +90,11 @@ export function CodePage() {
     "";
 
   const [mode, setMode] = useState<Mode>("approve");
-  const [transcript, setTranscript] = useState<TranscriptItem[]>([]);
-  const [streaming, setStreaming] = useState("");
+  const [messages, setMessages] = useState<ThreadMessageLike[]>([]);
+  const [streamingText, setStreamingText] = useState("");
   const [busy, setBusy] = useState(false);
-  const [status, setStatus] = useState("");
   const [plan, setPlan] = useState<PlanStep[]>([]);
   const [docName, setDocName] = useState<string | null>(null);
-  const [draft, setDraft] = useState("");
   const [cancelRequested, setCancelRequested] = useState(false);
 
   const [approval, setApproval] = useState<PendingApproval | null>(null);
@@ -120,30 +102,25 @@ export function CodePage() {
 
   const agentRef = useRef<Agent | null>(null);
   const counter = useRef(0);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const nextId = () => (counter.current += 1);
+  const nextId = () => `m${(counter.current += 1)}`;
 
-  // Load saved projects on mount.
+  // Reset the conversation when the active project changes. This follows React's
+  // "adjust state while rendering" pattern rather than an effect, so the cleared
+  // transcript is rendered in the same pass the project switches.
+  const [lastProjectId, setLastProjectId] = useState(active?.id);
+  if (active?.id !== lastProjectId) {
+    setLastProjectId(active?.id);
+    agentRef.current = null;
+    setMessages([]);
+    setStreamingText("");
+    setPlan([]);
+    setDocName(null);
+  }
+
   useEffect(() => {
     if (!isPortal) return;
     portal.listProjects().then(setProjects).catch(setError);
   }, []);
-
-  // Auto-scroll the transcript as it grows.
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-  }, [transcript, streaming]);
-
-  // The agent is recreated whenever the active project changes; mode and model
-  // changes are pushed into the live agent so the conversation is preserved.
-  useEffect(() => {
-    agentRef.current = null;
-    setTranscript([]);
-    setStreaming("");
-    setStatus("");
-    setPlan([]);
-    setDocName(null);
-  }, [active?.id]);
 
   useEffect(() => {
     agentRef.current?.setMode(mode);
@@ -157,60 +134,72 @@ export function CodePage() {
       event: (event: AgentEvent) => {
         switch (event.kind) {
           case "assistant_delta":
-            setStatus("Responding…");
-            setStreaming((current) => current + event.text);
+            setStreamingText((current) => current + event.text);
             break;
           case "assistant_done":
-            setStreaming("");
-            setStatus("Thinking…");
-            setTranscript((items) => [
+            setStreamingText("");
+            setMessages((items) => [
               ...items,
-              { kind: "assistant", id: nextId(), text: event.text },
+              {
+                id: nextId(),
+                role: "assistant",
+                content: [{ type: "text", text: event.text }],
+              },
             ]);
             break;
           case "tool_started":
-            setStatus(event.summary);
-            setTranscript((items) => [
+            setMessages((items) => [
               ...items,
               {
-                kind: "tool",
-                id: nextId(),
-                callId: event.id,
-                name: event.name,
-                summary: event.summary,
-                status: "running",
-                output: "",
+                id: event.id,
+                role: "assistant",
+                content: [
+                  {
+                    type: "tool-call",
+                    toolCallId: event.id,
+                    toolName: event.name,
+                    args: { summary: event.summary },
+                  },
+                ],
               },
             ]);
             break;
           case "tool_finished":
-            setTranscript((items) =>
+            setMessages((items) =>
               items.map((item) =>
-                item.kind === "tool" && item.callId === event.id
+                item.id === event.id
                   ? {
                       ...item,
-                      status: event.ok ? "ok" : "error",
-                      output: event.output,
+                      content: [
+                        {
+                          type: "tool-call",
+                          toolCallId: event.id,
+                          toolName: event.name,
+                          args: { summary: toolSummary(item) },
+                          result: event.output,
+                          isError: !event.ok,
+                        },
+                      ],
                     }
                   : item,
               ),
             );
-            setStatus("Thinking…");
             break;
           case "plan_updated":
             setPlan(event.steps);
             break;
           case "notice":
-            setTranscript((items) => [
+            setMessages((items) => [
               ...items,
-              { kind: "notice", id: nextId(), text: event.text },
+              {
+                id: nextId(),
+                role: "system",
+                content: [{ type: "text", text: event.text }],
+              },
             ]);
             break;
           case "error":
-            setTranscript((items) => [
-              ...items,
-              { kind: "error", id: nextId(), text: event.text },
-            ]);
+            setError(new Error(event.text));
             break;
           case "turn_complete":
             break;
@@ -274,7 +263,6 @@ export function CodePage() {
   const stopRun = useCallback(() => {
     if (!busy) return;
     setCancelRequested(true);
-    setStatus("Stopping…");
     approval?.resolve(false);
     question?.resolve("(stopped)");
     setApproval(null);
@@ -282,18 +270,16 @@ export function CodePage() {
     agentRef.current?.abort();
   }, [approval, busy, question]);
 
-  async function send(event?: FormEvent) {
-    event?.preventDefault();
-    const input = draft.trim();
-    if (!input || busy || !active || !selectedModel) return;
-    setDraft("");
+  async function send(input: string) {
+    const trimmed = input.trim();
+    if (!trimmed || busy || !active || !selectedModel) return;
     setCancelRequested(false);
-    setTranscript((items) => [
+    setError(null);
+    setMessages((items) => [
       ...items,
-      { kind: "user", id: nextId(), text: input },
+      { id: nextId(), role: "user", content: [{ type: "text", text: trimmed }] },
     ]);
     setBusy(true);
-    setStatus("Thinking…");
     try {
       if (!agentRef.current) {
         agentRef.current = await Agent.create(
@@ -305,23 +291,43 @@ export function CodePage() {
         );
         setDocName(agentRef.current.projectDocName());
       }
-      await agentRef.current.runTurn(input);
+      await agentRef.current.runTurn(trimmed);
     } catch (caught) {
-      setTranscript((items) => [
-        ...items,
-        {
-          kind: "error",
-          id: nextId(),
-          text: caught instanceof Error ? caught.message : String(caught),
-        },
-      ]);
+      setError(caught);
     } finally {
-      setStreaming("");
-      setStatus("");
+      setStreamingText("");
       setBusy(false);
       setCancelRequested(false);
     }
   }
+
+  const runtimeMessages: ThreadMessageLike[] = [
+    ...messages,
+    ...(streamingText
+      ? [
+          {
+            id: "__streaming",
+            role: "assistant" as const,
+            content: [{ type: "text" as const, text: streamingText }],
+            status: { type: "running" as const },
+          },
+        ]
+      : []),
+  ];
+
+  const runtime = useExternalStoreRuntime<ThreadMessageLike>({
+    messages: runtimeMessages,
+    isRunning: busy,
+    convertMessage: (message) => message,
+    onNew: async (message) => {
+      const text = message.content
+        .filter((part): part is { type: "text"; text: string } => part.type === "text")
+        .map((part) => part.text)
+        .join("");
+      await send(text);
+    },
+    onCancel: async () => stopRun(),
+  });
 
   if (!isPortal) {
     return (
@@ -342,13 +348,13 @@ export function CodePage() {
       {/* Projects rail */}
       <aside className="panel flex w-64 shrink-0 flex-col border-y-0 border-l-0 p-3">
         <div className="mb-2 flex items-center justify-between px-1">
-          <span className="text-[0.68rem] font-bold tracking-[0.12em] text-[var(--muted)] uppercase">
+          <span className="text-[0.68rem] font-bold tracking-[0.12em] text-muted-foreground uppercase">
             Projects
           </span>
           <button
             onClick={() => void addProject()}
             disabled={busy}
-            className="grid h-8 w-8 place-items-center rounded-lg text-[var(--muted)] transition hover:bg-black/5 hover:text-current disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-white/10"
+            className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
             title={busy ? "Stop the current turn first" : "Add project folder"}
             aria-label="Add project folder"
           >
@@ -360,11 +366,12 @@ export function CodePage() {
           {projects.map((project) => (
             <div
               key={project.id}
-              className={`group flex min-w-0 items-center gap-2 rounded-xl px-3 py-2 transition ${
+              className={cn(
+                "group flex min-w-0 items-center gap-2 rounded-xl px-3 py-2 transition",
                 active?.id === project.id
-                  ? "bg-[image:var(--accent-grad)] text-[var(--accent-contrast)]"
-                  : "text-[var(--muted)] hover:bg-black/5 hover:text-current dark:hover:bg-white/10"
-              }`}
+                  ? "bg-[image:var(--accent-grad)] text-primary-foreground"
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground",
+              )}
             >
               <button
                 onClick={() => void selectProject(project)}
@@ -393,7 +400,7 @@ export function CodePage() {
             </div>
           ))}
           {!projects.length && (
-            <p className="rounded-xl border border-dashed border-[var(--border)] p-6 text-center text-sm text-[var(--muted)]">
+            <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
               Add a folder to start coding.
             </p>
           )}
@@ -408,10 +415,10 @@ export function CodePage() {
           </EmptyState>
         ) : (
           <>
-            <header className="flex flex-wrap items-center gap-3 border-b border-[var(--border)] p-3">
+            <header className="flex flex-wrap items-center gap-3 border-b border-border p-3">
               <div className="min-w-0 flex-1">
                 <strong className="block truncate">{active.name}</strong>
-                <span className="block truncate text-xs text-[var(--muted)]">
+                <span className="block truncate text-xs text-muted-foreground">
                   {active.path}
                   {docName && ` · ${docName}`}
                 </span>
@@ -435,76 +442,40 @@ export function CodePage() {
               )}
             </header>
 
-            {plan.length > 0 && <PlanPanel steps={plan} />}
-
-            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4">
-              <div className="mx-auto grid max-w-3xl gap-3">
-                {transcript.map((item) => (
-                  <TranscriptRow key={item.id} item={item} />
-                ))}
-                {streaming && (
-                  <div className="prose-message max-w-none">
-                    <Suspense fallback={<span>{streaming}</span>}>
-                      <Markdown>{streaming}</Markdown>
-                    </Suspense>
-                  </div>
-                )}
-                {busy && (
-                  <div className="flex items-center gap-2 text-sm text-[var(--muted)]">
-                    <Spinner size={15} />
-                    <span className="truncate">{status || "Thinking…"}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <form
-              onSubmit={(event) => void send(event)}
-              className="border-t border-[var(--border)] p-3"
-            >
-              <div className="mx-auto flex max-w-3xl items-end gap-2">
-                <textarea
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (
-                      e.key === "Enter" &&
-                      !e.shiftKey &&
-                      !e.nativeEvent.isComposing
-                    ) {
-                      e.preventDefault();
-                      void send();
-                    }
-                  }}
-                  rows={2}
+            <div className="min-h-0 flex-1">
+              <AssistantRuntimeProvider runtime={runtime}>
+                <Thread
+                  parts={AGENT_PARTS}
+                  composerDisabled={!selectedModel}
                   placeholder={`Ask FeltnerAI Code to work in ${active.name}…`}
-                  disabled={busy}
-                  className="field max-h-40 min-h-12 flex-1 resize-y"
-                />
-                <Button
-                  type={busy ? "button" : "submit"}
-                  variant={busy ? "secondary" : "primary"}
-                  disabled={
-                    busy ? cancelRequested : !draft.trim() || !selectedModel
+                  welcome={
+                    <EmptyState title="What should we build?">
+                      Describe a task and FeltnerAI Code will plan, edit files,
+                      and run commands in {active.name}.
+                    </EmptyState>
                   }
-                  onClick={busy ? stopRun : undefined}
-                >
-                  {busy ? (
-                    <>
-                      <Square size={15} />{" "}
-                      {cancelRequested ? "Stopping" : "Stop"}
-                    </>
-                  ) : (
-                    <Send size={17} />
-                  )}
-                </Button>
-              </div>
-            </form>
+                  headerSlot={
+                    <div className="mx-auto w-full max-w-3xl px-5">
+                      {plan.length > 0 && <PlanPanel steps={plan} />}
+                      {error ? (
+                        <div className="pt-4">
+                          <ErrorNotice error={error} />
+                        </div>
+                      ) : null}
+                    </div>
+                  }
+                />
+              </AssistantRuntimeProvider>
+            </div>
           </>
         )}
       </div>
 
-      <ApprovalModal approval={approval} onClose={() => setApproval(null)} />
+      <ApprovalModal
+        approval={approval}
+        cancelRequested={cancelRequested}
+        onClose={() => setApproval(null)}
+      />
       <AskModal
         key={question?.prompt ?? "idle"}
         question={question}
@@ -514,120 +485,62 @@ export function CodePage() {
   );
 }
 
-function TranscriptRow({ item }: { item: TranscriptItem }) {
-  if (item.kind === "user") {
-    return (
-      <div className="ml-auto max-w-[85%] rounded-2xl bg-[image:var(--accent-grad)] px-4 py-2.5 text-[var(--accent-contrast)]">
-        {item.text}
-      </div>
-    );
+function toolSummary(message: ThreadMessageLike): string {
+  const part = Array.isArray(message.content) ? message.content[0] : undefined;
+  if (part && typeof part === "object" && part.type === "tool-call") {
+    const args = part.args as { summary?: string } | undefined;
+    return args?.summary ?? part.toolName;
   }
-  if (item.kind === "assistant") {
-    return (
-      <div className="prose-message max-w-none">
-        <Suspense fallback={<span>{item.text}</span>}>
-          <Markdown>{item.text}</Markdown>
-        </Suspense>
-      </div>
-    );
-  }
-  if (item.kind === "tool") return <ToolCard item={item} />;
-  if (item.kind === "notice") {
-    return (
-      <p className="text-center text-xs text-[var(--muted)]">{item.text}</p>
-    );
-  }
-  return (
-    <div className="rounded-xl border border-[var(--danger)]/35 bg-[var(--danger)]/10 p-3 text-sm text-[var(--danger)]">
-      {item.text}
-    </div>
-  );
-}
-
-function ToolCard({
-  item,
-}: {
-  item: Extract<TranscriptItem, { kind: "tool" }>;
-}) {
-  const [open, setOpen] = useState(false);
-  const expanded = open || item.status === "error";
-  const tone =
-    item.status === "ok"
-      ? "success"
-      : item.status === "error"
-        ? "danger"
-        : "neutral";
-  return (
-    <div className="card overflow-hidden rounded-xl">
-      <button
-        onClick={() => setOpen((value) => !value)}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm"
-      >
-        {expanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
-        <Terminal size={15} className="text-[var(--muted)]" />
-        <span className="min-w-0 flex-1 truncate font-medium">
-          {item.summary}
-        </span>
-        <Badge tone={tone}>
-          {item.status === "running" ? "running…" : item.status}
-        </Badge>
-      </button>
-      {expanded && item.output && (
-        <pre className="max-h-72 overflow-auto border-t border-[var(--border)] bg-black/20 px-3 py-2 text-xs whitespace-pre-wrap">
-          {item.output}
-        </pre>
-      )}
-    </div>
-  );
+  return "";
 }
 
 function PlanPanel({ steps }: { steps: PlanStep[] }) {
   return (
-    <div className="border-b border-[var(--border)] px-4 py-2">
-      <div className="mx-auto max-w-3xl">
-        <div className="mb-1 flex items-center gap-2 text-xs font-bold tracking-wide text-[var(--muted)] uppercase">
-          <ListChecks size={14} /> Plan
-        </div>
-        <ul className="grid gap-1 text-sm">
-          {steps.map((step, index) => (
-            <li key={index} className="flex items-center gap-2">
-              <span
-                className={
-                  step.status === "done"
-                    ? "text-emerald-500"
-                    : step.status === "in_progress"
-                      ? "text-[var(--accent)]"
-                      : "text-[var(--muted)]"
-                }
-              >
-                {step.status === "done"
-                  ? "✓"
-                  : step.status === "in_progress"
-                    ? "▸"
-                    : "○"}
-              </span>
-              <span
-                className={
-                  step.status === "done"
-                    ? "text-[var(--muted)] line-through"
-                    : ""
-                }
-              >
-                {step.step}
-              </span>
-            </li>
-          ))}
-        </ul>
+    <div className="mt-4 rounded-xl border border-border bg-[var(--panel-solid)]/40 px-4 py-3">
+      <div className="mb-1 flex items-center gap-2 text-xs font-bold tracking-wide text-muted-foreground uppercase">
+        <ListChecks size={14} /> Plan
       </div>
+      <ul className="grid gap-1 text-sm">
+        {steps.map((step, index) => (
+          <li key={index} className="flex items-center gap-2">
+            <span
+              className={
+                step.status === "done"
+                  ? "text-emerald-500"
+                  : step.status === "in_progress"
+                    ? "text-[var(--accent)]"
+                    : "text-muted-foreground"
+              }
+            >
+              {step.status === "done"
+                ? "✓"
+                : step.status === "in_progress"
+                  ? "▸"
+                  : "○"}
+            </span>
+            <span
+              className={
+                step.status === "done"
+                  ? "text-muted-foreground line-through"
+                  : ""
+              }
+            >
+              {step.step}
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
 
 function ApprovalModal({
   approval,
+  cancelRequested,
   onClose,
 }: {
   approval: PendingApproval | null;
+  cancelRequested: boolean;
   onClose: () => void;
 }) {
   const decide = (approved: boolean) => {
@@ -636,12 +549,12 @@ function ApprovalModal({
   };
   return (
     <Modal
-      open={!!approval}
+      open={!!approval && !cancelRequested}
       onOpenChange={(open) => {
         if (!open) decide(false);
       }}
       title="Approve action"
-      description={approval ? MODE_LABELS.approve + " mode" : undefined}
+      description={`${MODE_LABELS.approve} mode`}
     >
       {approval && (
         <div className="grid gap-4">
@@ -714,12 +627,12 @@ function AskModal({
               answer(text);
             }}
           >
-            <textarea
+            <Textarea
               value={text}
               onChange={(event) => setText(event.target.value)}
               rows={2}
               placeholder="Type an answer…"
-              className="field flex-1 resize-y"
+              className="flex-1 resize-y"
             />
             <Button type="submit" disabled={!text.trim()}>
               Send

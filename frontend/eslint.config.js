@@ -6,13 +6,7 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: [
-      "dist",
-      "playwright-report",
-      "test-results",
-      "**/*.d.ts",
-      "*.config.js",
-    ],
+    ignores: ["dist", "**/*.d.ts", "*.config.js"],
   },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],

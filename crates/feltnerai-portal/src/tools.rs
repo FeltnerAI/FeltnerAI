@@ -158,10 +158,9 @@ fn list_files_impl(root: String, path: Option<String>) -> Result<String, String>
         if entry
             .file_type()
             .is_some_and(|file_type| file_type.is_file())
+            && let Ok(relative) = entry.path().strip_prefix(&canonical_root)
         {
-            if let Ok(relative) = entry.path().strip_prefix(&canonical_root) {
-                found.push(relative.to_string_lossy().replace('\\', "/"));
-            }
+            found.push(relative.to_string_lossy().replace('\\', "/"));
         }
     }
     found.sort();

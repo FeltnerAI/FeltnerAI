@@ -35,10 +35,6 @@ test:
     cargo test --workspace
     bun run --cwd frontend test
 
-[group('check')]
-e2e:
-    bun run --cwd frontend test:e2e
-
 [group('codegen')]
 generate-api:
     cargo run -p feltnerai-api-types --example generate_ts
@@ -59,19 +55,9 @@ build:
 portal:
     bun run --cwd frontend tauri build
 
+# `bun run` executes scripts in Bun's own shell, so the frontend clean step is
+# cross-platform without needing a separate Windows recipe.
 [group('build')]
-[unix]
 clean:
     cargo clean
-    rm -rf frontend/dist frontend/test-results frontend/playwright-report frontend/node_modules/.vite
-    rm -f frontend/*.tsbuildinfo
-
-[group('build')]
-[windows]
-clean:
-    cargo clean
-    if (Test-Path frontend/dist) { Remove-Item -Recurse -Force frontend/dist }
-    if (Test-Path frontend/test-results) { Remove-Item -Recurse -Force frontend/test-results }
-    if (Test-Path frontend/playwright-report) { Remove-Item -Recurse -Force frontend/playwright-report }
-    if (Test-Path frontend/node_modules/.vite) { Remove-Item -Recurse -Force frontend/node_modules/.vite }
-    Get-ChildItem frontend -Filter *.tsbuildinfo | Remove-Item -Force
+    bun run --cwd frontend clean

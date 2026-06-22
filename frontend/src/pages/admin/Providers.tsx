@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import { api } from "../../api/client";
 import type { ConnectionTestResponse, Provider } from "../../api/generated";
 import { useFeedback } from "../../components/feedback";
-import { Button, ErrorNotice, Input, Modal } from "../../components/ui";
+import { Button, ErrorNotice, Input, Modal } from "../../components/common";
 import { AdminPage } from "./Users";
 
 export function AdminProvidersPage() {

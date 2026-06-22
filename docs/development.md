@@ -13,7 +13,7 @@ Run setup to install project dependencies and report missing system tools:
 just setup
 ```
 
-Setup installs frontend packages, Playwright Chromium, and fetches Rust crates. On Linux it checks GTK/WebKit pkg-config modules needed for `just portal`. On Windows it checks WebView2 and MSVC build tools. On macOS it checks Xcode Command Line Tools.
+Setup installs frontend packages and fetches Rust crates. On Linux it checks GTK/WebKit pkg-config modules needed for `just portal`. On Windows it checks WebView2 and MSVC build tools. On macOS it checks Xcode Command Line Tools.
 
 ## Run
 
@@ -52,10 +52,9 @@ Review `frontend/src/api/generated.ts` in the same change.
 
 ```powershell
 just check
-just e2e
 ```
 
-`just check` verifies Rust formatting and Clippy, runs workspace tests, type-checks and lints the frontend, runs Vitest, and builds the embedded frontend. Playwright uses mocked API journeys for deterministic UI workflow coverage; Rust integration tests exercise the real Axum/SQLx server against an in-process OpenAI-compatible upstream.
+`just check` verifies Rust formatting and Clippy, runs workspace tests, type-checks and lints the frontend, runs Vitest, and builds the embedded frontend. Rust integration tests exercise the real Axum/SQLx server against an in-process OpenAI-compatible upstream.
 
 ## Portal
 

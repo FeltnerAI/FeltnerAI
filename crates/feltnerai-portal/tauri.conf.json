@@ -27,7 +27,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": ["icons/icon.png", "icons/icon.ico"],
+    "icon": ["icons/icon.icns", "icons/icon.png", "icons/icon.ico"],
     "createUpdaterArtifacts": false,
     "windows": {
       "nsis": {

@@ -14,12 +14,22 @@ fn main() {
     println!("cargo:rerun-if-changed=../../frontend/dist");
     println!("cargo:rerun-if-changed=icons/icon.ico");
     fs::create_dir_all(&source).expect("create frontend embed directory");
-    if env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows") {
-        winresource::WindowsResource::new()
-            .set_icon("icons/icon.ico")
-            .set("ProductName", "FeltnerAI Server")
-            .set("FileDescription", "FeltnerAI self-hosted AI server")
-            .compile()
-            .expect("compile Windows executable resources");
-    }
+    embed_windows_resources();
 }
+
+// `winresource` is only pulled in as a host-Windows build-dependency (see
+// Cargo.toml), so the call must be gated at compile time, not at runtime: a
+// runtime `env::var("CARGO_CFG_TARGET_OS")` check still forces the symbol to
+// resolve on macOS/Linux, which is what broke `cargo build` there.
+#[cfg(windows)]
+fn embed_windows_resources() {
+    winresource::WindowsResource::new()
+        .set_icon("icons/icon.ico")
+        .set("ProductName", "FeltnerAI Server")
+        .set("FileDescription", "FeltnerAI self-hosted AI server")
+        .compile()
+        .expect("compile Windows executable resources");
+}
+
+#[cfg(not(windows))]
+fn embed_windows_resources() {}

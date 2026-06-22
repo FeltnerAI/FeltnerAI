@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { configureApi } from "./api/client";
 import type { ServerHandshake } from "./api/generated";
-import { Button, ErrorNotice, Input, Modal } from "./components/ui";
+import { Button, ErrorNotice, Input, Modal } from "./components/common";
 import { isPortal, portal, validateServer, type ServerProfile } from "./portal";
 
 export function PortalGate({

@@ -1,7 +1,7 @@
 import { Bot } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
-import { Button, ErrorNotice, Input, Spinner } from "../components/ui";
+import { Button, ErrorNotice, Input, Spinner } from "../components/common";
 import { useAuth, useRuntime } from "../contexts";
 
 export function LoginPage() {

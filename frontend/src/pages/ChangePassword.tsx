@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
-import { Button, ErrorNotice, Input } from "../components/ui";
+import { Button, ErrorNotice, Input } from "../components/common";
 import { useAuth } from "../contexts";
 
 export function ChangePasswordPage() {

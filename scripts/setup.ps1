@@ -119,9 +119,7 @@ Write-Host "Installing project dependencies..."
 if (Get-Command bun -ErrorAction SilentlyContinue) {
   bun install --cwd frontend
   if ($LASTEXITCODE -ne 0) { throw "bun install failed" }
-  bun run --cwd frontend playwright:install
-  if ($LASTEXITCODE -ne 0) { throw "playwright install failed" }
-  Write-Ok "frontend npm packages and Playwright Chromium"
+  Write-Ok "frontend packages installed"
 } else {
   Write-Warn "Skipped frontend install because bun is missing"
 }

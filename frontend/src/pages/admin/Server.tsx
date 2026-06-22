@@ -3,7 +3,7 @@ import { useState, type FormEvent } from "react";
 import { api, apiBlob } from "../../api/client";
 import type { ImportDataResponse, ServerSettings } from "../../api/generated";
 import { useFeedback } from "../../components/feedback";
-import { Button, ErrorNotice, Input } from "../../components/ui";
+import { Button, ErrorNotice, Input } from "../../components/common";
 import { AdminPage } from "./Users";
 
 export function AdminServerPage() {

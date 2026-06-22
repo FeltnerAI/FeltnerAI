@@ -1,5 +1,7 @@
 use anyhow::Result;
 
+// Only referenced by the Windows registry startup helpers below.
+#[cfg(windows)]
 const STARTUP_VALUE_NAME: &str = "FeltnerAI Server";
 
 pub fn startup_supported() -> bool {
